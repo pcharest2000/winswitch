@@ -43,24 +43,29 @@ gboolean labelMatch(char input) {
     return FALSE;
   }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
+    if (visibleWindowsArray[i].noMatch)
+      continue;
     if (visibleWindowsArray[i].as[charMatchIndex] == input) {
       visibleWindowsArray[i].numCharMatch++;
       match = 1;
       if (visibleWindowsArray[i].numCharMatch ==
-          visibleWindowsArray[i].charWidth  ) {
+          visibleWindowsArray[i].charWidth) {
         requestWindowChange(visibleWindowsArray[i].winId);
         destroyWindow();
         gtk_main_quit();
-        charMatchIndex = 0;
-        for (uint32_t j = 0; j < numVisibleWindows; j++) {
-          visibleWindowsArray[j].numCharMatch=0;
-        }
         return TRUE;
       }
     }
   }
   if (match) {
     charMatchIndex++;
+    for (uint32_t i = 0; i < numVisibleWindows; i++) {
+      if (visibleWindowsArray[i].charWidth == charMatchIndex) {
+        visibleWindowsArray[i].noMatch = 1;
+        printf("\n No Match!set");
+      }
+    }
+  return TRUE;
   }
   return FALSE;
 }
@@ -86,7 +91,6 @@ void setFontSize(double fontSizeIn) {
 }
 
 void calFontPosition() {
-
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     visibleWindowsArray[i].fontPosX =
         visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 -
@@ -106,12 +110,26 @@ static void do_drawing(cairo_t *cr) {
   cairo_set_source_rgba(cr, 0, 0.0, 0, transparency);
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
-  cairo_set_source_rgb(cr, 0, 1.0, 0);
-
+  char temp[] = " ";
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
-    cairo_move_to(cr, visibleWindowsArray[i].fontPosX,
-                  visibleWindowsArray[i].fontPosY);
-    cairo_show_text(cr, visibleWindowsArray[i].as);
+    if (visibleWindowsArray[i].noMatch) {
+      continue;
+    }
+    for (uint32_t j = visibleWindowsArray[i].numCharMatch;
+         j < visibleWindowsArray[i].charWidth; j++) {
+      temp[0] = visibleWindowsArray[i].as[j];
+      cairo_set_source_rgb(cr, 0.0, 1.0, 0);
+      cairo_move_to(cr, visibleWindowsArray[i].fontPosX + fontHalfWidth * j,
+                    visibleWindowsArray[i].fontPosY);
+      cairo_show_text(cr, temp);
+    }
+    for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) {
+      temp[0] = visibleWindowsArray[i].as[j];
+      cairo_set_source_rgb(cr, 1.0, 0.0, 0);
+      cairo_move_to(cr, visibleWindowsArray[i].fontPosX + fontHalfWidth * j,
+                    visibleWindowsArray[i].fontPosY);
+      cairo_show_text(cr, temp);
+    }
   }
   cairo_stroke(cr);
 }
@@ -134,8 +152,6 @@ void requestWindowChange(xcb_window_t winToActivate) {
                                         currentActiveWin);
   usleep(1000); // This is required when quitting sometimes does not honor
   xcb_flush(xcb_con);
-
-
 }
 void printVisibleWindows() {
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -202,7 +218,7 @@ void getVisibleWindows() {
         return;
     }
   }
-  //If we have window and desktop exit!
+  // If we have window and desktop exit!
   fflush(stdout);
 }
 
@@ -214,10 +230,9 @@ int connectToServers() {
   }
   /* Open the connection to the XCB server */
   xcb_con = xcb_connect(NULL, NULL);
-  if(xcb_connection_has_error(xcb_con)){
+  if (xcb_connection_has_error(xcb_con)) {
     return EXIT_FAILURE;
   }
-
 
   load_atoms(xcb_con);
   /////// Get the first screen */
@@ -244,19 +259,24 @@ gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
                            gpointer data) {
 
   printf("\nKeyVal: %d", event->keyval);
+  // Quit application
   if (event->keyval == 'q' || event->keyval == GDK_KEY_Escape) {
     returnHome();
     destroyWindow();
-  gtk_main_quit();
     fflush(stdout);
+    gtk_main_quit();
     return FALSE;
   }
-  labelMatch(event->keyval);
+  //If we have a keyboard match redraw
+  if (labelMatch(event->keyval)) {
+  gtk_widget_queue_draw(gtk_window);
+  }
   return FALSE;
 }
 void disconnect() { xcb_disconnect(xcb_con); }
+
 int main(int argc, char *argv[]) {
-  if(connectToServers()){
+  if (connectToServers()) {
     printf("Cannot connect to X");
     return 0;
   }
@@ -267,7 +287,7 @@ int main(int argc, char *argv[]) {
   calFontPosition();
   printVisibleWindows();
 
-  if ( numVisibleWindows == 1) {
+  if (numVisibleWindows == 1) {
     destroyWindow();
     return 0;
   }
@@ -293,8 +313,8 @@ void swap(windowInfo_t *xp, windowInfo_t *yp) {
   *xp = *yp;
   *yp = temp;
 }
+// Function to perform Selection Sort
 void selectionSort(windowInfo_t input[], int n) {
-  // Function to perform Selection Sort
   int i, j, min_idx;
 
   // One by one move boundary of unsorted subarray
@@ -305,7 +325,6 @@ void selectionSort(windowInfo_t input[], int n) {
     for (j = i + 1; j < n; j++)
       if (input[j].desktop < input[min_idx].desktop)
         min_idx = j;
-
     // Swap the found minimum element
     // with the first element
     swap(&input[min_idx], &input[i]);
@@ -366,7 +385,7 @@ void printDesktopInfo() {
 }
 void labelWindows() {
   // This is a speciale case where we have only one desktop
-  if (numVisibleDesktops == 1 ) {
+  if (numVisibleDesktops == 1) {
     uint32_t charIndex = 0;
     uint32_t homeCharIndex = 0;
     uint32_t startingWindow = 0;

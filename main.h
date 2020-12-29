@@ -34,7 +34,7 @@ typedef struct windowsInfo_t {
   uint32_t charWidth;
   char as[12]; // If we go above 3 character how many windows do you have
   uint32_t numCharMatch;
-  uint32_t noMatach;
+  uint32_t noMatch;
   uint32_t fontPosX;
   uint32_t fontPosY;
 } windowInfo_t;
@@ -77,7 +77,7 @@ uint32_t numVisibleWindows;
 uint32_t numVisibleDesktops;
 uint32_t curentActiveDesktop;
 xcb_window_t currentActiveWin; //Used to go back to it when we do nothing
-char labelString[] = "abc";
+char labelString[] = "abcde";
 uint32_t numKeys = sizeof(labelString) - 1;
 uint32_t charMatchIndex=0;
 // GTK Stuff
