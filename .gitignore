@@ -2,6 +2,7 @@
 .ccls-cache
 
 core
+compile_commands.json
 # Prerequisites
 *.d
 

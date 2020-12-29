@@ -50,7 +50,7 @@ gboolean labelMatch(char input) {
       match = 1;
       if (visibleWindowsArray[i].numCharMatch ==
           visibleWindowsArray[i].charWidth) {
-        requestWindowChange(visibleWindowsArray[i].winId);
+        requestWindowChange(visibleWindowsArray[i]);
         destroyWindow();
         gtk_main_quit();
         return TRUE;
@@ -127,7 +127,7 @@ static void do_drawing(cairo_t *cr) {
     for (uint32_t j = visibleWindowsArray[i].numCharMatch;
          j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
-      cairo_set_source_rgb(cr, 0.0, 1.0, 0);
+      cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
       cairo_move_to(cr,
                     visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
                     visibleWindowsArray[i].fontPosY);
@@ -135,7 +135,7 @@ static void do_drawing(cairo_t *cr) {
     }
     for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
-      cairo_set_source_rgb(cr, 1.0, 0.0, 0);
+      cairo_set_source_rgb(cr, config.fontHiligthR,config.fontHiligthG,config.fontHiligthB);
       cairo_move_to(cr,
                     visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
                     visibleWindowsArray[i].fontPosY);
@@ -154,15 +154,18 @@ void returnHome() {
   // we need to reset the mouse pointer to the origanle winow
   xcb_warp_pointer(xcb_con, XCB_NONE, currentActiveWin, 10, 10, 20, 20, 20, 20);
   xcb_ewmh_set_current_desktop(ewmh_con, 0, curentActiveDesktop);
-  requestWindowChange(currentActiveWin);
-  xcb_flush(xcb_con);
-}
-void requestWindowChange(xcb_window_t winToActivate) {
-  //xcb_ewmh_set_current_desktop(ewmh_con, 0, curentActiveDesktop);
-  xcb_ewmh_request_change_active_window(ewmh_con, 0, winToActivate, 1, 0,
+  xcb_ewmh_request_change_active_window(ewmh_con, 0, currentActiveWin, 1, 0,
                                         currentActiveWin);
-  usleep(1000); // This is required when quitting sometimes does not honor
   xcb_flush(xcb_con);
+
+  usleep(500);
+}
+void requestWindowChange(windowInfo_t winToActivate) {
+  //xcb_ewmh_set_current_desktop(ewmh_con, 0, curentActiveDesktop);
+  xcb_ewmh_request_change_active_window(ewmh_con, 0, winToActivate.winId, 1, 0,
+                                        currentActiveWin);
+  xcb_flush(xcb_con);
+  usleep(500); // This is required when quitting sometimes does not honor
 }
 void printVisibleWindows() {
   for (uint32_t i = 0; i < numVisibleWindows; i++) {

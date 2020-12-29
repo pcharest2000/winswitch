@@ -31,7 +31,7 @@ typedef struct windowsInfo_t {
   int16_t x;
   int16_t y;
   uint32_t charWidth;
-  char as[12]; // If we go above 3 character how many windows do you have
+  char as[22]; // If we go above 3 character how many windows do you have
   uint32_t numCharMatch;
   uint32_t noMatch;
   uint32_t fontPosX;
@@ -45,34 +45,42 @@ typedef struct desktopInfo_t {
   char firstChar; // The first char to reach the desktop
 } desktopInfo_t;
 
-typedef struct
-{
-float transparency;// = 0.8;
-uint32_t timeOut;// = 10; // seconds
-double fontSize;// = 64.0;
-double fontHalfHeigth;// = 32;
-double fontHalfWidth;// = 32;
-char quitChar;
-char font[];
-}configuration;
+typedef struct {
+  float transparency;    // = 0.8;
+  uint32_t timeOut;      // = 10; // seconds
+  double fontSize;       // = 64.0;
+  double fontHalfHeigth; // = 32;
+  double fontHalfWidth;  // = 32;
+  char quitChar;
+  float fontR;
+  float fontG;
+  float fontB;
+  float fontHiligthR;
+  float fontHiligthG;
+  float fontHiligthB;
+  char font[];
+} configuration;
 
-configuration  config = {
-.transparency =0.8,
-.timeOut=5000,
-.fontSize=32.0,
-.fontHalfHeigth=16.0,
-.fontHalfWidth=16.0,
-.quitChar='q',
-.font="Serif",
+configuration config = {
+    .transparency = 0.8,
+    .timeOut = 5000,
+    .fontSize = 32.0,
+    .fontHalfHeigth = 16.0,
+    .fontHalfWidth = 16.0,
+    .quitChar = 'q',
+    .fontR=0.0,
+    .fontG=1.0,
+    .fontB=0.0,
+    .fontHiligthR=0.0,
+    .fontHiligthG=0.0,
+    .fontHiligthB=1.0,
+    .font = "Serif",
 };
-
-
-
 
 void getVisibleWindows();
 void printVisibleWindows();
 void getDesktopsInfo();
-void requestWindowChange(xcb_window_t win);
+void requestWindowChange(windowInfo_t win);
 void returnHome();
 void printDesktopInfo();
 void destroyWindow();
@@ -86,7 +94,7 @@ void getDesktopsInfo();
 void labelWindows();
 static void do_drawing(cairo_t *cr);
 
-gint timeOut(); //Function to exit when timer expires
+gint timeOut(); // Function to exit when timer expires
 // Globals
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
@@ -100,7 +108,7 @@ uint32_t numVisibleWindows;
 uint32_t numVisibleDesktops;
 uint32_t curentActiveDesktop;  // Used to got back to it when we exit and
 xcb_window_t currentActiveWin; // Used to go back to it when we do nothing
-const char labelString[] = "abcde";
+const char labelString[] = "ab";
 const uint32_t numCharInLabelString = sizeof(labelString) - 1;
 uint32_t charMatchIndex = 0; // Holds how many charcters we have matched
 // GTK Stuff
