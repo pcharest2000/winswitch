@@ -36,32 +36,15 @@ void load_atoms(xcb_connection_t *c) {
 }
 
 gboolean labelMatch(char input) {
-  uint32_t match = 0;
-  // Is the character par of the string if not exit
-  if (!strchr(labelString, input)) {
-    printf("\nHere!:");
-    return FALSE;
-  }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].as[charMatchIndex] == input) {
+      printf("\nWe hace a match: %d", charMatchIndex);
+      charMatchIndex++;
       visibleWindowsArray[i].numCharMatch++;
-      match = 1;
-      if (visibleWindowsArray[i].numCharMatch ==
-          visibleWindowsArray[i].charWidth  ) {
-        requestWindowChange(visibleWindowsArray[i].winId);
-        destroyWindow();
-        gtk_main_quit();
-        charMatchIndex = 0;
-        for (uint32_t j = 0; j < numVisibleWindows; j++) {
-          visibleWindowsArray[j].numCharMatch=0;
-        }
-        return TRUE;
-      }
     }
   }
-  if (match) {
-    charMatchIndex++;
-  }
+  printf("Char: %c", input);
+
   return FALSE;
 }
 void gtkInitWindow() {
@@ -73,6 +56,7 @@ void gtkInitWindow() {
   gtk_widget_add_events(gtk_window, GDK_KEY_PRESS_MASK);
   GdkScreen *screen = gdk_screen_get_default();
   GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
+
   if (visual != NULL && gdk_screen_is_composited(screen)) {
     gtk_widget_set_visual(gtk_window, visual);
   }
@@ -94,7 +78,7 @@ void calFontPosition() {
     visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y +
                                       visibleWindowsArray[i].height / 2 +
                                       fontHalfHeigth;
-    visibleWindowsArray[i].numCharMatch = 0;
+    visibleWindowsArray[i].numCharMatch=0;
   }
 }
 static void do_drawing(cairo_t *cr) {
@@ -128,14 +112,12 @@ void returnHome() {
   xcb_ewmh_set_current_desktop(ewmh_con, 0, curentActiveDesktop);
   requestWindowChange(currentActiveWin);
   xcb_flush(xcb_con);
+  usleep(100); // This is required when quitting sometimes does not honor
 }
 void requestWindowChange(xcb_window_t winToActivate) {
   xcb_ewmh_request_change_active_window(ewmh_con, 0, winToActivate, 1, 0,
                                         currentActiveWin);
-  usleep(1000); // This is required when quitting sometimes does not honor
   xcb_flush(xcb_con);
-
-
 }
 void printVisibleWindows() {
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -202,11 +184,14 @@ void getVisibleWindows() {
         return;
     }
   }
-  //If we have window and desktop exit!
   fflush(stdout);
 }
 
 int connectToServers() {
+  /* char *title = "Hello World !"; */
+  /* char *title_icon = "Hello World ! (iconified)"; */
+  // xcb_size_hints_t hints;
+  uint32_t numWindows = 0;
   /* Open the connection to the X11 server */
   if (!(disp_con = XOpenDisplay(NULL))) {
     fputs("Cannot open display.\n", stderr);
@@ -214,11 +199,6 @@ int connectToServers() {
   }
   /* Open the connection to the XCB server */
   xcb_con = xcb_connect(NULL, NULL);
-  if(xcb_connection_has_error(xcb_con)){
-    return EXIT_FAILURE;
-  }
-
-
   load_atoms(xcb_con);
   /////// Get the first screen */
   screen = xcb_setup_roots_iterator(xcb_get_setup(xcb_con)).data;
@@ -239,6 +219,7 @@ void destroyWindow() {
   xcb_flush(xcb_con);
   xcb_disconnect(xcb_con);
   XCloseDisplay(disp_con);
+  gtk_main_quit();
 }
 gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
                            gpointer data) {
@@ -247,7 +228,6 @@ gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
   if (event->keyval == 'q' || event->keyval == GDK_KEY_Escape) {
     returnHome();
     destroyWindow();
-  gtk_main_quit();
     fflush(stdout);
     return FALSE;
   }
@@ -256,21 +236,14 @@ gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
 }
 void disconnect() { xcb_disconnect(xcb_con); }
 int main(int argc, char *argv[]) {
-  if(connectToServers()){
-    printf("Cannot connect to X");
-    return 0;
-  }
+  GtkWidget *lbl;
+  connectToServers();
   getVisibleWindows();
   selectionSort(visibleWindowsArray, numVisibleWindows);
   getDesktopsInfo();
   labelWindows();
   calFontPosition();
   printVisibleWindows();
-
-  if ( numVisibleWindows == 1) {
-    destroyWindow();
-    return 0;
-  }
   gtk_init(&argc, &argv);
   gtkInitWindow();
 
@@ -366,7 +339,15 @@ void printDesktopInfo() {
 }
 void labelWindows() {
   // This is a speciale case where we have only one desktop
-  if (numVisibleDesktops == 1 ) {
+  if (numVisibleDesktops == 1) {
+    if (numVisibleWindows == 1) {
+      printf("What");
+
+      visibleWindowsArray[0].charWidth = 1;
+      visibleWindowsArray[0].as[0] = labelString[0];
+      visibleWindowsArray[0].as[1] = '\0';
+      return;
+    }
     uint32_t charIndex = 0;
     uint32_t homeCharIndex = 0;
     uint32_t startingWindow = 0;
@@ -412,7 +393,7 @@ void labelWindows() {
       uint32_t startingWindow = visibleDesktopsArray[k].indexWindow;
       uint32_t endWindow = visibleDesktopsArray[k].numWindows +
                            visibleDesktopsArray[k].indexWindow;
-      uint32_t charWidth = 2;
+      uint32_t charWidth = 1;
 
       printf("\nEnd Window%d", endWindow);
       while (1) {

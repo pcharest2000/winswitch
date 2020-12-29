@@ -1,6 +1,6 @@
 #ifndef __MAIN_H_
 #define __MAIN_H_
-
+#include <string.h>
 #include "atoms.h"
 #include "switcherDef.h"
 #include <cairo/cairo-xcb.h>
@@ -78,9 +78,8 @@ uint32_t numVisibleDesktops;
 uint32_t curentActiveDesktop;
 xcb_window_t currentActiveWin; //Used to go back to it when we do nothing
 char labelString[] = "abc";
-// char homeRow[] = "fdjkslag;hievncmo";
-/* char homeRow[] = "fdsajkl;gheivnrupq"; */
 uint32_t numKeys = sizeof(labelString) - 1;
+uint32_t charMatchIndex=0;
 // GTK Stuff
 
 GtkWidget *gtk_window;
