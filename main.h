@@ -1,6 +1,5 @@
 #ifndef __MAIN_H_
 #define __MAIN_H_
-#include <string.h>
 #include "atoms.h"
 #include "switcherDef.h"
 #include <cairo/cairo-xcb.h>
@@ -41,10 +40,34 @@ typedef struct windowsInfo_t {
 
 typedef struct desktopInfo_t {
   int32_t desktopNum;
-  uint32_t indexWindow;  //The index where the windows are located
+  uint32_t indexWindow; // The index where the windows are located
   uint16_t numWindows;
-  char firstChar; //The first char to reach the desktop
+  char firstChar; // The first char to reach the desktop
 } desktopInfo_t;
+
+typedef struct
+{
+float transparency;// = 0.8;
+uint32_t timeOut;// = 10; // seconds
+double fontSize;// = 64.0;
+double fontHalfHeigth;// = 32;
+double fontHalfWidth;// = 32;
+char quitChar;
+char font[];
+}configuration;
+
+configuration  config = {
+.transparency =0.8,
+.timeOut=5000,
+.fontSize=32.0,
+.fontHalfHeigth=16.0,
+.fontHalfWidth=16.0,
+.quitChar='q',
+.font="Serif",
+};
+
+
+
 
 void getVisibleWindows();
 void printVisibleWindows();
@@ -52,7 +75,6 @@ void getDesktopsInfo();
 void requestWindowChange(xcb_window_t win);
 void returnHome();
 void printDesktopInfo();
-void gtkInitWindow();
 void destroyWindow();
 void calFontPosition();
 // Helpers
@@ -64,6 +86,7 @@ void getDesktopsInfo();
 void labelWindows();
 static void do_drawing(cairo_t *cr);
 
+gint timeOut(); //Function to exit when timer expires
 // Globals
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
@@ -72,24 +95,19 @@ xcb_ewmh_connection_t *ewmh_con;
 Display *disp_con; // X11 Connection
 cairo_t *cr;
 windowInfo_t *visibleWindowsArray; // Holds information about visible windows on
-desktopInfo_t *visibleDesktopsArray;
+desktopInfo_t *visibleDesktopsArray; // Holds info on the desktops
 uint32_t numVisibleWindows;
 uint32_t numVisibleDesktops;
-uint32_t curentActiveDesktop;
-xcb_window_t currentActiveWin; //Used to go back to it when we do nothing
-char labelString[] = "abcde";
-uint32_t numKeys = sizeof(labelString) - 1;
-uint32_t charMatchIndex=0;
+uint32_t curentActiveDesktop;  // Used to got back to it when we exit and
+xcb_window_t currentActiveWin; // Used to go back to it when we do nothing
+const char labelString[] = "abcde";
+const uint32_t numCharInLabelString = sizeof(labelString) - 1;
+uint32_t charMatchIndex = 0; // Holds how many charcters we have matched
 // GTK Stuff
 
-GtkWidget *gtk_window;
-GtkWidget *gtk_darea;
-
-// Config Variables
-float transparency = 0.8;
-uint32_t configTimeOut = 10; // seconds
-double fontSize = 64.0;
-double fontHalfHeigth = 32;
-double fontHalfWidth = 32;
-
+GtkWidget *gtkWin;
+gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
+                           gpointer data);
+void gtkInitWindow();
+gint gTimerQuit;
 #endif // __MAIN_H_

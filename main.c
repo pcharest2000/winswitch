@@ -62,52 +62,61 @@ gboolean labelMatch(char input) {
     for (uint32_t i = 0; i < numVisibleWindows; i++) {
       if (visibleWindowsArray[i].charWidth == charMatchIndex) {
         visibleWindowsArray[i].noMatch = 1;
-        printf("\n No Match!set");
       }
     }
-  return TRUE;
+    return TRUE;
   }
   return FALSE;
 }
 void gtkInitWindow() {
-  gtk_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_widget_set_app_paintable(gtk_window, TRUE);
-  gtk_window_set_type_hint(GTK_WINDOW(gtk_window), GDK_WINDOW_TYPE_HINT_DIALOG);
-  gtk_window_set_keep_above(GTK_WINDOW(gtk_window), TRUE);
-  gtk_window_set_title(gtk_window, "Switcher");
-  gtk_widget_add_events(gtk_window, GDK_KEY_PRESS_MASK);
-  GdkScreen *screen = gdk_screen_get_default();
-  GdkVisual *visual = gdk_screen_get_rgba_visual(screen);
-  if (visual != NULL && gdk_screen_is_composited(screen)) {
-    gtk_widget_set_visual(gtk_window, visual);
+  gtkWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_widget_set_app_paintable(gtkWin, TRUE);
+  gtk_window_set_type_hint(GTK_WINDOW(gtkWin), GDK_WINDOW_TYPE_HINT_DIALOG);
+  gtk_window_set_keep_above(GTK_WINDOW(gtkWin), TRUE);
+  gtk_window_set_title(GTK_WINDOW(gtkWin), "Switcher");
+  gtk_widget_add_events(gtkWin, GDK_KEY_PRESS_MASK);
+  GdkScreen *gdkscreen = gdk_screen_get_default();
+  GdkVisual *visual = gdk_screen_get_rgba_visual(gdkscreen);
+  if (visual != NULL && gdk_screen_is_composited(gdkscreen)) {
+    gtk_widget_set_visual(gtkWin, visual);
   }
-  gtk_window_move(gtk_window, 0, 0);
+  /* cr = gdk_drawing_context_get_cairo_context(gtkWindow); */
+  g_signal_connect(G_OBJECT(gtkWin), "draw", G_CALLBACK(on_draw_event), NULL);
+  g_signal_connect(gtkWin, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+  g_signal_connect(G_OBJECT(gtkWin), "key_press_event",
+                   G_CALLBACK(keypress_function), NULL);
+
+  gtk_window_set_default_size(GTK_WINDOW(gtkWin), screen->width_in_pixels,
+                              screen->height_in_pixels);
+  gtk_widget_show_all(gtkWin);
+  gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
 }
 
 void setFontSize(double fontSizeIn) {
-  fontSize = fontSize;
-  fontHalfHeigth = fontSize / 2;
-  cairo_set_font_size(cr, fontSize);
+  config.fontSize = fontSizeIn;
+  config.fontHalfHeigth = config.fontSize / 2;
+  cairo_set_font_size(cr, config.fontSize);
 }
 
 void calFontPosition() {
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     visibleWindowsArray[i].fontPosX =
         visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 -
-        visibleWindowsArray[i].charWidth * fontHalfWidth / 2;
+        visibleWindowsArray[i].charWidth * config.fontHalfWidth / 2;
     visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y +
                                       visibleWindowsArray[i].height / 2 +
-                                      fontHalfHeigth;
+                                      config.fontHalfHeigth;
     visibleWindowsArray[i].numCharMatch = 0;
   }
 }
 static void do_drawing(cairo_t *cr) {
-  gtk_window_move(gtk_window, 0, 0);
-  cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL,
+  gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
+  cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL,
                          CAIRO_FONT_WEIGHT_BOLD);
-  cairo_set_font_size(cr, fontSize);
+  cairo_set_font_size(cr, config.fontSize);
+  // Clear the screen
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-  cairo_set_source_rgba(cr, 0, 0.0, 0, transparency);
+  cairo_set_source_rgba(cr, 0, 0.0, 0, config.transparency);
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
   char temp[] = " ";
@@ -119,14 +128,16 @@ static void do_drawing(cairo_t *cr) {
          j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
       cairo_set_source_rgb(cr, 0.0, 1.0, 0);
-      cairo_move_to(cr, visibleWindowsArray[i].fontPosX + fontHalfWidth * j,
+      cairo_move_to(cr,
+                    visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
                     visibleWindowsArray[i].fontPosY);
       cairo_show_text(cr, temp);
     }
     for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
       cairo_set_source_rgb(cr, 1.0, 0.0, 0);
-      cairo_move_to(cr, visibleWindowsArray[i].fontPosX + fontHalfWidth * j,
+      cairo_move_to(cr,
+                    visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
                     visibleWindowsArray[i].fontPosY);
       cairo_show_text(cr, temp);
     }
@@ -136,7 +147,6 @@ static void do_drawing(cairo_t *cr) {
 static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr,
                               gpointer user_data) {
   do_drawing(cr);
-
   return FALSE;
 }
 
@@ -148,6 +158,7 @@ void returnHome() {
   xcb_flush(xcb_con);
 }
 void requestWindowChange(xcb_window_t winToActivate) {
+  //xcb_ewmh_set_current_desktop(ewmh_con, 0, curentActiveDesktop);
   xcb_ewmh_request_change_active_window(ewmh_con, 0, winToActivate, 1, 0,
                                         currentActiveWin);
   usleep(1000); // This is required when quitting sometimes does not honor
@@ -192,7 +203,6 @@ void getVisibleWindows() {
     uint8_t state = winAttriReply->map_state;
     free(winAttriReply);
     if (state == XCB_MAP_STATE_VIEWABLE) {
-
       visibleWindowsArray[numVisibleWindows].winId = windowsReply.windows[i];
       /*Get windows Destopps*/
       uint32_t desk;
@@ -208,7 +218,6 @@ void getVisibleWindows() {
                    &wwidth, &wheight, &bw, &depth);
       XTranslateCoordinates(disp_con, windowsReply.windows[i], junkroot, junkx,
                             junky, &x, &y, &junkroot);
-
       visibleWindowsArray[numVisibleWindows].width = wwidth;
       visibleWindowsArray[numVisibleWindows].height = wheight;
       visibleWindowsArray[numVisibleWindows].x = x;
@@ -218,8 +227,6 @@ void getVisibleWindows() {
         return;
     }
   }
-  // If we have window and desktop exit!
-  fflush(stdout);
 }
 
 int connectToServers() {
@@ -250,7 +257,7 @@ int connectToServers() {
   return 0;
 }
 void destroyWindow() {
-  gtk_widget_queue_draw(gtk_window);
+  gtk_widget_queue_draw(gtkWin);
   xcb_flush(xcb_con);
   xcb_disconnect(xcb_con);
   XCloseDisplay(disp_con);
@@ -258,22 +265,33 @@ void destroyWindow() {
 gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
                            gpointer data) {
 
-  printf("\nKeyVal: %d", event->keyval);
+  // Reset timer to quit
+   g_source_remove (gTimerQuit);
+
+  gTimerQuit=g_timeout_add(config.timeOut, timeOut, NULL);
+
   // Quit application
-  if (event->keyval == 'q' || event->keyval == GDK_KEY_Escape) {
+  if (event->keyval == config.quitChar || event->keyval == GDK_KEY_Escape) {
     returnHome();
     destroyWindow();
     fflush(stdout);
     gtk_main_quit();
     return FALSE;
   }
-  //If we have a keyboard match redraw
+  // If we have a keyboard match redraw
   if (labelMatch(event->keyval)) {
-  gtk_widget_queue_draw(gtk_window);
+    gtk_widget_queue_draw(gtkWin);
   }
   return FALSE;
 }
 void disconnect() { xcb_disconnect(xcb_con); }
+
+gint timeOut() {
+  printf("\nTimeoOut");
+  returnHome();
+  destroyWindow();
+  gtk_main_quit();
+}
 
 int main(int argc, char *argv[]) {
   if (connectToServers()) {
@@ -294,17 +312,8 @@ int main(int argc, char *argv[]) {
   gtk_init(&argc, &argv);
   gtkInitWindow();
 
-  g_signal_connect(G_OBJECT(gtk_window), "draw", G_CALLBACK(on_draw_event),
-                   NULL);
-  g_signal_connect(gtk_window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
-  g_signal_connect(G_OBJECT(gtk_window), "key_press_event",
-                   G_CALLBACK(keypress_function), NULL);
-
-  gtk_window_set_default_size(GTK_WINDOW(gtk_window), screen->width_in_pixels,
-                              screen->height_in_pixels);
-
-  gtk_widget_show_all(gtk_window);
-  gtk_window_move(gtk_window, 0, 0);
+  gTimerQuit=g_timeout_add(config.timeOut, timeOut, NULL);
+  gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
   gtk_main();
   return 0;
 }
@@ -395,7 +404,7 @@ void labelWindows() {
         visibleWindowsArray[i].as[charIndex] = labelString[homeCharIndex];
         visibleWindowsArray[i].as[charIndex + 1] = '\0';
         visibleWindowsArray[i].charWidth = charWidth;
-        if (numKeys - 1 > homeCharIndex) {
+        if (numCharInLabelString - 1 > homeCharIndex) {
           homeCharIndex++;
         }
       }
@@ -404,7 +413,7 @@ void labelWindows() {
           visibleWindowsArray[visibleDesktopsArray[0].numWindows - 2]
               .as[charIndex]) {
         charIndex++;
-        startingWindow += numKeys - 1;
+        startingWindow += numCharInLabelString - 1;
         homeCharIndex = 0;
         charWidth++;
       } else
@@ -443,7 +452,7 @@ void labelWindows() {
           visibleWindowsArray[i].as[charIndex] = labelString[homeCharIndex];
           visibleWindowsArray[i].as[charIndex + 1] = '\0';
           visibleWindowsArray[i].charWidth = charWidth;
-          if (numKeys - 1 > homeCharIndex) {
+          if (numCharInLabelString - 1 > homeCharIndex) {
             homeCharIndex++;
           }
         }
@@ -453,7 +462,7 @@ void labelWindows() {
           charIndex++;
           homeCharIndex = 0;
           charWidth++;
-          startingWindow += numKeys - 1;
+          startingWindow += numCharInLabelString - 1;
         } else
           break;
       }
