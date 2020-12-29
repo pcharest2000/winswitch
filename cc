@@ -1,44 +1,45 @@
 #include "main.h"
 
-/* xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) { */
-/*   xcb_intern_atom_cookie_t atom_cookie; */
-/*   xcb_atom_t atom; */
-/*   xcb_intern_atom_reply_t *rep; */
+xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) {
+  xcb_intern_atom_cookie_t atom_cookie;
+  xcb_atom_t atom;
+  xcb_intern_atom_reply_t *rep;
 
-/*   atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name); */
-/*   rep = xcb_intern_atom_reply(c, atom_cookie, NULL); */
-/*   if (NULL != rep) { */
-/*     atom = rep->atom; */
-/*     free(rep); */
-/*     printf("\natom: %x", atom); */
-/*     fflush(stdout); */
-/*     return atom; */
-/*   } */
-/*   printf("\nError getting atom.\n"); */
-/*   exit(1); */
-/* } */
+  atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name);
+  rep = xcb_intern_atom_reply(c, atom_cookie, NULL);
+  if (NULL != rep) {
+    atom = rep->atom;
+    free(rep);
+    printf("\natom: %x", atom);
+    fflush(stdout);
+    return atom;
+  }
+  printf("\nError getting atom.\n");
+  exit(1);
+}
 
-/* void load_atoms(xcb_connection_t *c) { */
-/*   /\* load atoms *\/ */
-/*   xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX]; */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     atom_cookies[i] = */
-/*         xcb_intern_atom(c, 0, /\* "atom created if it doesn't already exist" *\/ */
-/*                         SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name); */
-/*   } */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     xcb_intern_atom_reply_t *reply = */
-/*         xcb_intern_atom_reply(c, atom_cookies[i], NULL); */
-/*     atoms[i] = reply->atom; */
-/*     //    printf("\nAtom:%d", atoms[i]); */
-/*     free(reply); */
-/*   } */
-/* } */
+void load_atoms(xcb_connection_t *c) {
+  /* load atoms */
+  xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX];
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    atom_cookies[i] =
+        xcb_intern_atom(c, 0, /* "atom created if it doesn't already exist" */
+                        SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name);
+  }
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    xcb_intern_atom_reply_t *reply =
+        xcb_intern_atom_reply(c, atom_cookies[i], NULL);
+    atoms[i] = reply->atom;
+    //    printf("\nAtom:%d", atoms[i]);
+    free(reply);
+  }
+}
 
 gboolean labelMatch(char input) {
   uint32_t match = 0;
-  // Is the character is not part of the string if not exit
+  // Is the character par of the string if not exit
   if (!strchr(labelString, input)) {
+    printf("\nHere!:");
     return FALSE;
   }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -122,6 +123,7 @@ static void do_drawing(cairo_t *cr) {
     for (uint32_t i = 0; i < numVisibleWindows; i++) {
       visibleWindowsArray[i].numCharMatch = 0;
       cairo_text_extents(cr, visibleWindowsArray[i].as, &te);
+
       visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x +
                                         visibleWindowsArray[i].width / 2 -
                                         te.width / 2;
@@ -151,13 +153,15 @@ static void do_drawing(cairo_t *cr) {
     }
     cairo_move_to(cr, visibleWindowsArray[i].fontPosX,
                   visibleWindowsArray[i].fontPosY);
-    for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
+    for (uint32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
-      if (j + 1 <= visibleWindowsArray[i].numCharMatch)
+      if (j  < visibleWindowsArray[j].numCharMatch)
         cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
                              config.fontHiligthB);
       else
-        cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
+        cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
+                             config.fontHiligthB);
+      cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
       cairo_show_text(cr, temp);
       cairo_rel_move_to(cr, visibleWindowsArray[i].charExtA[j].x_bearing, 0);
     }
@@ -274,7 +278,7 @@ int connectToServers() {
     return EXIT_FAILURE;
   }
 
- // load_atoms(xcb_con);
+  load_atoms(xcb_con);
   /////// Get the first screen */
   screen = xcb_setup_roots_iterator(xcb_get_setup(xcb_con)).data;
   /*Open the connection to ewmh*/

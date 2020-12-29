@@ -32,10 +32,11 @@ typedef struct windowsInfo_t {
   int16_t y;
   uint32_t charWidth;
   char as[22]; // If we go above 3 character how many windows do you have
-  uint32_t numCharMatch;
+  int32_t numCharMatch;
   uint32_t noMatch;
   uint32_t fontPosX;
   uint32_t fontPosY;
+  cairo_text_extents_t  * charExtA;
 } windowInfo_t;
 
 typedef struct desktopInfo_t {
@@ -64,9 +65,9 @@ typedef struct {
 configuration config = {
     .transparency = 0.8,
     .timeOut = 5000,
-    .fontSize = 32.0,
-    .fontHalfHeigth = 16.0,
-    .fontHalfWidth = 16.0,
+    .fontSize = 64.0,
+    .fontHalfHeigth = 32.0,
+    .fontHalfWidth = 32.0,
     .quitChar = 'q',
     .fontR=0.0,
     .fontG=1.0,
@@ -108,7 +109,8 @@ uint32_t numVisibleWindows;
 uint32_t numVisibleDesktops;
 uint32_t curentActiveDesktop;  // Used to got back to it when we exit and
 xcb_window_t currentActiveWin; // Used to go back to it when we do nothing
-const char labelString[] = "ab";
+//const char labelString[] = "ab";
+const char labelString[] = "fjdkslaghei;nv";
 const uint32_t numCharInLabelString = sizeof(labelString) - 1;
 uint32_t charMatchIndex = 0; // Holds how many charcters we have matched
 // GTK Stuff

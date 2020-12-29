@@ -1,44 +1,45 @@
 #include "main.h"
 
-/* xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) { */
-/*   xcb_intern_atom_cookie_t atom_cookie; */
-/*   xcb_atom_t atom; */
-/*   xcb_intern_atom_reply_t *rep; */
+xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) {
+  xcb_intern_atom_cookie_t atom_cookie;
+  xcb_atom_t atom;
+  xcb_intern_atom_reply_t *rep;
 
-/*   atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name); */
-/*   rep = xcb_intern_atom_reply(c, atom_cookie, NULL); */
-/*   if (NULL != rep) { */
-/*     atom = rep->atom; */
-/*     free(rep); */
-/*     printf("\natom: %x", atom); */
-/*     fflush(stdout); */
-/*     return atom; */
-/*   } */
-/*   printf("\nError getting atom.\n"); */
-/*   exit(1); */
-/* } */
+  atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name);
+  rep = xcb_intern_atom_reply(c, atom_cookie, NULL);
+  if (NULL != rep) {
+    atom = rep->atom;
+    free(rep);
+    printf("\natom: %x", atom);
+    fflush(stdout);
+    return atom;
+  }
+  printf("\nError getting atom.\n");
+  exit(1);
+}
 
-/* void load_atoms(xcb_connection_t *c) { */
-/*   /\* load atoms *\/ */
-/*   xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX]; */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     atom_cookies[i] = */
-/*         xcb_intern_atom(c, 0, /\* "atom created if it doesn't already exist" *\/ */
-/*                         SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name); */
-/*   } */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     xcb_intern_atom_reply_t *reply = */
-/*         xcb_intern_atom_reply(c, atom_cookies[i], NULL); */
-/*     atoms[i] = reply->atom; */
-/*     //    printf("\nAtom:%d", atoms[i]); */
-/*     free(reply); */
-/*   } */
-/* } */
+void load_atoms(xcb_connection_t *c) {
+  /* load atoms */
+  xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX];
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    atom_cookies[i] =
+        xcb_intern_atom(c, 0, /* "atom created if it doesn't already exist" */
+                        SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name);
+  }
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    xcb_intern_atom_reply_t *reply =
+        xcb_intern_atom_reply(c, atom_cookies[i], NULL);
+    atoms[i] = reply->atom;
+    //    printf("\nAtom:%d", atoms[i]);
+    free(reply);
+  }
+}
 
 gboolean labelMatch(char input) {
   uint32_t match = 0;
-  // Is the character is not part of the string if not exit
+  // Is the character par of the string if not exit
   if (!strchr(labelString, input)) {
+    printf("\nHere!:");
     return FALSE;
   }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -110,35 +111,16 @@ void calFontPosition() {
 }
 static void do_drawing(cairo_t *cr) {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
-
-  // We calcu;ate the font extent only once and fill the info
   cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL,
                          CAIRO_FONT_WEIGHT_BOLD);
 
+//We calcu;ate the font extent only once and fill the info
+
+  if(visibleWindowsArray[0].charExtA == NULL){
+ printf("\nFont extents null!"); 
+}
+
   cairo_set_font_size(cr, config.fontSize);
-  if (visibleWindowsArray[0].charExtA == NULL) {
-    cairo_text_extents_t te; // tmp extent
-    char tmp[] = " ";
-    for (uint32_t i = 0; i < numVisibleWindows; i++) {
-      visibleWindowsArray[i].numCharMatch = 0;
-      cairo_text_extents(cr, visibleWindowsArray[i].as, &te);
-      visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x +
-                                        visibleWindowsArray[i].width / 2 -
-                                        te.width / 2;
-      visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y +
-                                        visibleWindowsArray[i].height / 2 +
-                                        config.fontHalfHeigth;
-
-      visibleWindowsArray[i].charExtA = (cairo_text_extents_t *)malloc(
-          visibleWindowsArray[i].charWidth * sizeof(cairo_text_extents_t));
-      // get extents for each charachers
-      for (uint32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
-        tmp[0] = visibleWindowsArray[i].as[j];
-        cairo_text_extents(cr, tmp, &visibleWindowsArray[i].charExtA[j]);
-      }
-    }
-  }
-
   // Clear the screen
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr, 0, 0.0, 0, config.transparency);
@@ -149,28 +131,25 @@ static void do_drawing(cairo_t *cr) {
     if (visibleWindowsArray[i].noMatch) {
       continue;
     }
-    cairo_move_to(cr, visibleWindowsArray[i].fontPosX,
-                  visibleWindowsArray[i].fontPosY);
-    for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
+    for (uint32_t j = visibleWindowsArray[i].numCharMatch;
+         j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
-      if (j + 1 <= visibleWindowsArray[i].numCharMatch)
-        cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
-                             config.fontHiligthB);
-      else
-        cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
+      cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
+      cairo_move_to(cr,
+                    visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
+                    visibleWindowsArray[i].fontPosY);
       cairo_show_text(cr, temp);
-      cairo_rel_move_to(cr, visibleWindowsArray[i].charExtA[j].x_bearing, 0);
+    }
+    for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) {
+      temp[0] = visibleWindowsArray[i].as[j];
+      cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
+                           config.fontHiligthB);
+      cairo_move_to(cr,
+                    visibleWindowsArray[i].fontPosX + config.fontHalfWidth * j,
+                    visibleWindowsArray[i].fontPosY);
+      cairo_show_text(cr, temp);
     }
   }
-  /* for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) { */
-  /*   temp[0] = visibleWindowsArray[i].as[j]; */
-  //  cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
-  //                      config.fontHiligthB);
-  /*   cairo_show_text(cr, temp); */
-  /*   cairo_rel_move_to(cr, */
-  /*                  visibleWindowsArray[i].charExtA[j].x_advance, */
-  /*                 0); */
-  /* } */
   cairo_stroke(cr);
 }
 
@@ -274,7 +253,7 @@ int connectToServers() {
     return EXIT_FAILURE;
   }
 
- // load_atoms(xcb_con);
+  load_atoms(xcb_con);
   /////// Get the first screen */
   screen = xcb_setup_roots_iterator(xcb_get_setup(xcb_con)).data;
   /*Open the connection to ewmh*/
