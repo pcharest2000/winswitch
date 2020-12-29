@@ -1,7 +1,7 @@
 #directories
 .ccls-cache
 
-
+core
 # Prerequisites
 *.d
 
