@@ -1,3 +1,30 @@
+
+/* license {{{ */
+/*
+
+winswitch
+A command line tool to change windows with an overlay on dekstops to switch window.
+Mostly used for tiling window managers
+
+Author, current maintainer: Philippe Charest <philippe.charest@gmail.com>
+
+Copyright (C) 2020
+
+This program is free software which I release under the GNU General Public
+License. You may redistribute and/or modify this program under the terms
+of that license as published by the Free Software Foundation; either
+version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+To get a copy of the GNU General Puplic License,  write to the
+Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+*/
+/* }}} */
 #include "main.h"
 
 gboolean labelMatch(char input) {
@@ -35,7 +62,7 @@ void gtkInitWindow() {
   gtkWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_app_paintable(gtkWin, TRUE);
   gtk_window_set_type_hint(GTK_WINDOW(gtkWin), GDK_WINDOW_TYPE_HINT_DIALOG);
-  //  gtk_window_set_keep_above(GTK_WINDOW(gtkWin), TRUE);
+  gtk_window_set_keep_above(GTK_WINDOW(gtkWin), TRUE);
   gtk_window_set_title(GTK_WINDOW(gtkWin), "Switcher");
   gtk_widget_add_events(gtkWin, GDK_KEY_PRESS_MASK);
   GdkScreen *gdkscreen = gdk_screen_get_default();
@@ -52,12 +79,63 @@ void gtkInitWindow() {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
 }
 
+int configTimeOut(char *input){
+
+  int timeOut;
+  if (sscanf(input, "%d", &timeOut) == EOF || timeOut < 0 ) {
+    fprintf(stderr, "\n Invalid option must be 0 or greater");
+    return EXIT_FAILURE;
+  }
+  config.timeOut = timeOut;
+
+return 0;
+}
+int configFontAlpha(char *input){
+
+  float alpha;
+  if (sscanf(input, "%f", &alpha) == EOF || alpha>1.0 || alpha<0.0) {
+    fprintf(stderr, "\n Invalid input for font alpha value must be float between 0 .0and 1.0");
+    return EXIT_FAILURE;
+  }
+  config.selectedAlpha =alpha;
+
+return 0;
+}
+int configFontSize(char *input) {
+  float size;
+  if (sscanf(input, "%f", &size) == EOF || size<1.0) {
+    fprintf(stderr, "\n Invalid input for font size");
+    return EXIT_FAILURE;
+  }
+  config.fontSize =size;
+  return 0;
+}
+
+int configFontColor(char *input) {
+  printf("\n Input:%s,input",input);
+  //VddFunction takes hexadeciin
+  //male
+  if (strlen(input) != 6) {
+    printf("\n Invalid size for color, must be RGB hexadecimal!");
+    return EXIT_FAILURE;
+  }
+  int r, g, b;
+  //printf("%s",input);
+  sscanf(input, "%02x%02x%02x", &r, &g, &b);
+  config.fontR = r / 255.0;
+  config.fontB = b / 255.0;
+  config.fontG = g / 255.0;
+  return 0;
+  /* printf("\n R: %f G: %f B: %f", config.fontR, config.fontG, config.fontB); */
+}
 static void do_drawing(cairo_t *cr) {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
   // We calcu;ate the font extent only once and fill the info
-  if (!posiInitalized) {
   cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
   cairo_set_font_size(cr, config.fontSize);
+  if (!posiInitalized) {
+    cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    cairo_set_font_size(cr, config.fontSize);
     posiInitalized = TRUE;
     printf("Hello");
     cairo_text_extents_t te; // tmp extent
@@ -172,13 +250,13 @@ void getVisibleWindows() {
 int connectToServers() {
   /* Open the connection to the X11 server */
   if (!(disp_con = XOpenDisplay(NULL))) {
-    fputs("Cannot open display.\n", stderr);
+    fputs("\nCannot open display.", stderr);
     return EXIT_FAILURE;
   }
   /* Open the connection to the XCB server */
   xcb_con = xcb_connect(NULL, NULL);
   if (xcb_connection_has_error(xcb_con)) {
-    printf("XCB has erros!!");
+    printf("\nXCB has erros!!");
     return EXIT_FAILURE;
   }
 
@@ -191,10 +269,10 @@ int connectToServers() {
   ewmh_con = malloc(sizeof(xcb_ewmh_connection_t));
   xcb_intern_atom_cookie_t *ewmhCookie;
   if (!xcb_ewmh_init_atoms_replies(ewmh_con, xcb_ewmh_init_atoms(xcb_con, ewmh_con), NULL)) {
-    puts("EWHM init failed");
+    puts("\nEWHM init failed");
     return EXIT_FAILURE;
   } else
-    puts("EWHM init succes");
+    puts("\nEWHM init succes");
   return 0;
 }
 void destroyWindow() {
@@ -208,8 +286,10 @@ void destroyWindow() {
 gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event,
                           gpointer data) {
   // Reset the timer to quit application
+  if(config.timeOut>0){
   g_source_remove(gTimerQuit);
   gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
+  }
   // Quit application
   if (event->keyval == config.quitChar || event->keyval == GDK_KEY_Escape) {
     returnHome();
@@ -233,7 +313,46 @@ gint timeOutCallback() {
   return FALSE; //Do not repeat the timer
 }
 
+int parseArguments(int argc, char *argv[]) {
+  int opt;
+  // put ':' in the starting of the
+  // string so that program can
+  //distinguish between '?' and ':'
+  while ((opt = getopt(argc, argv, "c:s:a:t:")) != -1) {
+    switch (opt) {
+    case 'c':
+      configFontColor(optarg);
+      break;
+    case 's':
+      configFontSize(optarg);
+      break;
+    case 'a':
+      configFontAlpha(optarg);
+      break;
+    case 't':
+      configTimeOut(optarg);
+      break;
+    case ':':
+      printf("\nOption needs a value");
+      break;
+    case '?':
+      printf("unknown option:%c\n ", optopt);
+      break;
+    }
+  }
+
+  // optind is for the extra arguments
+  // which are not parsed
+  for (; optind < argc; optind++) {
+    printf("extra arguments %s\n ", argv[optind]);
+  }
+
+  fflush(stdout);
+
+  return 0;
+}
 int main(int argc, char *argv[]) {
+  parseArguments(argc, argv);
   if (connectToServers()) {
     printf("Cannot connect to X");
     return 0;
@@ -250,7 +369,9 @@ int main(int argc, char *argv[]) {
   }
   gtk_init(&argc, &argv);
   gtkInitWindow();
+  if(config.timeOut>0){
   gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
+  }
   gtk_widget_show_all(gtkWin);
   gtk_main();
   return 0;

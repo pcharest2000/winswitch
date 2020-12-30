@@ -69,13 +69,16 @@ void selectionSort(windowInfo_t inpput[], int n);
 void swap(windowInfo_t *xp, windowInfo_t *yp);
 void getDesktopsInfo();
 void labelWindows();
-void load_atoms(xcb_connection_t *c);
+//Config functions for parameters
+int configFontColor(char *input);
+int configFontSize(char *input);
+int configFontAlpha(char *input);
+int configTimeOut(char *input);
 // Globals
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
 xcb_ewmh_connection_t *ewmh_con;
 Display *disp_con; // X11 Connection
-cairo_t *cr2;
 windowInfo_t *visibleWindowsArray;   // Holds information about visible windows on
 desktopInfo_t *visibleDesktopsArray; // Holds info on the desktops
 uint32_t numVisibleWindows;
@@ -95,4 +98,26 @@ gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event, gpointer data);
 static gboolean drawCallback(GtkWidget *widget, cairo_t *cr, gpointer user_data);
 static void do_drawing(cairo_t *cr);
 gint timeOutCallback(); // Function to exit when timer expires
+
+// clang-format off
+#define VERSION "1.0"
+/* help {{{ */
+/* #define HELP */
+/*   "winswitch " VERSION "\n" */
+/*   "Usage: winswitch [OPTION]...overlay to change windows\n" */
+/*   "Actions:\n" */
+/*   "  -t <TIME>            Set timeout period in seconds, 0 for no timeout\n" */
+/*   "  -fs <SIZE>           Set the font size\n" */
+/*   "  -fn <NAME>           Set the font name\n" */
+/*   "  -fa <ALPHA>          Set the inactive font alpha alpha \n" */
+/*   "  -fc <ALPHA>          Set the font color \n" */
+/*   "  -wa <ALPHA>          Set the window alpha \n" */
+/*   "Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \ */
+/*   "Released under the GNU General Public License.\n" */
+/*   "Copyright (C) 2003\n" */
+/* /\* }}} *\/ */
+
+/* // clang-format off */
+
+
 #endif                  // __MAIN_H_
