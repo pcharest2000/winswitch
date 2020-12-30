@@ -1,44 +1,10 @@
 #include "main.h"
 
-/* xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) { */
-/*   xcb_intern_atom_cookie_t atom_cookie; */
-/*   xcb_atom_t atom; */
-/*   xcb_intern_atom_reply_t *rep; */
-
-/*   atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name); */
-/*   rep = xcb_intern_atom_reply(c, atom_cookie, NULL); */
-/*   if (NULL != rep) { */
-/*     atom = rep->atom; */
-/*     free(rep); */
-/*     printf("\natom: %x", atom); */
-/*     fflush(stdout); */
-/*     return atom; */
-/*   } */
-/*   printf("\nError getting atom.\n"); */
-/*   exit(1); */
-/* } */
-
-/* void load_atoms(xcb_connection_t *c) { */
-/*   /\* load atoms *\/ */
-/*   xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX]; */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     atom_cookies[i] = */
-/*         xcb_intern_atom(c, 0, /\* "atom created if it doesn't already exist" *\/ */
-/*                         SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name); */
-/*   } */
-/*   for (int i = 0; i < SB_ATOM_MAX; i++) { */
-/*     xcb_intern_atom_reply_t *reply = */
-/*         xcb_intern_atom_reply(c, atom_cookies[i], NULL); */
-/*     atoms[i] = reply->atom; */
-/*     //    printf("\nAtom:%d", atoms[i]); */
-/*     free(reply); */
-/*   } */
-/* } */
-
 gboolean labelMatch(char input) {
   uint32_t match = 0;
   // Is the character is not part of the string if not exit
   if (!strchr(labelString, input)) {
+    printf("\nNoMatch");
     return FALSE;
   }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -51,7 +17,6 @@ gboolean labelMatch(char input) {
           visibleWindowsArray[i].charWidth) {
         requestWindowChange(visibleWindowsArray[i]);
         destroyWindow();
-        gtk_main_quit();
         return TRUE;
       }
     }
@@ -71,7 +36,7 @@ void gtkInitWindow() {
   gtkWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_app_paintable(gtkWin, TRUE);
   gtk_window_set_type_hint(GTK_WINDOW(gtkWin), GDK_WINDOW_TYPE_HINT_DIALOG);
-  gtk_window_set_keep_above(GTK_WINDOW(gtkWin), TRUE);
+  //  gtk_window_set_keep_above(GTK_WINDOW(gtkWin), TRUE);
   gtk_window_set_title(GTK_WINDOW(gtkWin), "Switcher");
   gtk_widget_add_events(gtkWin, GDK_KEY_PRESS_MASK);
   GdkScreen *gdkscreen = gdk_screen_get_default();
@@ -80,10 +45,10 @@ void gtkInitWindow() {
     gtk_widget_set_visual(gtkWin, visual);
   }
   /* cr = gdk_drawing_context_get_cairo_context(gtkWindow); */
-  g_signal_connect(G_OBJECT(gtkWin), "draw", G_CALLBACK(on_draw_event), NULL);
+  g_signal_connect(G_OBJECT(gtkWin), "draw", G_CALLBACK(drawCallback), NULL);
   g_signal_connect(gtkWin, "destroy", G_CALLBACK(gtk_main_quit), NULL);
   g_signal_connect(G_OBJECT(gtkWin), "key_press_event",
-                   G_CALLBACK(keypress_function), NULL);
+                   G_CALLBACK(keypressCallback), NULL);
 
   gtk_window_set_default_size(GTK_WINDOW(gtkWin), screen->width_in_pixels,
                               screen->height_in_pixels);
@@ -91,23 +56,12 @@ void gtkInitWindow() {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
 }
 
-void setFontSize(double fontSizeIn) {
-  config.fontSize = fontSizeIn;
-  config.fontHalfHeigth = config.fontSize / 2;
-  cairo_set_font_size(cr, config.fontSize);
-}
+/* void setFontSize(double fontSizeIn) { */
+/*   config.fontSize = fontSizeIn; */
+/*   config.fontHalfHeigth = config.fontSize / 2; */
+/*   cairo_set_font_size(cr, config.fontSize); */
+/* } */
 
-void calFontPosition() {
-  for (uint32_t i = 0; i < numVisibleWindows; i++) {
-    visibleWindowsArray[i].fontPosX =
-        visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 -
-        visibleWindowsArray[i].charWidth * config.fontHalfWidth / 2;
-    visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y +
-                                      visibleWindowsArray[i].height / 2 +
-                                      config.fontHalfHeigth;
-    visibleWindowsArray[i].numCharMatch = 0;
-  }
-}
 static void do_drawing(cairo_t *cr) {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
 
@@ -116,7 +70,9 @@ static void do_drawing(cairo_t *cr) {
                          CAIRO_FONT_WEIGHT_BOLD);
 
   cairo_set_font_size(cr, config.fontSize);
-  if (visibleWindowsArray[0].charExtA == NULL) {
+  if (!posiInitalized) {
+    posiInitalized = TRUE;
+    printf("Hello");
     cairo_text_extents_t te; // tmp extent
     char tmp[] = " ";
     for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -128,23 +84,16 @@ static void do_drawing(cairo_t *cr) {
       visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y +
                                         visibleWindowsArray[i].height / 2 +
                                         config.fontHalfHeigth;
-
-      visibleWindowsArray[i].charExtA = (cairo_text_extents_t *)malloc(
-          visibleWindowsArray[i].charWidth * sizeof(cairo_text_extents_t));
-      // get extents for each charachers
-      for (uint32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
-        tmp[0] = visibleWindowsArray[i].as[j];
-        cairo_text_extents(cr, tmp, &visibleWindowsArray[i].charExtA[j]);
-      }
     }
   }
 
   // Clear the screen
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
-  cairo_set_source_rgba(cr, 0, 0.0, 0, config.transparency);
+  cairo_set_source_rgba(cr, 0, 0.0, 0, config.winAlpha);
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
   char temp[] = " ";
+
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].noMatch) {
       continue;
@@ -154,28 +103,21 @@ static void do_drawing(cairo_t *cr) {
     for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
       if (j + 1 <= visibleWindowsArray[i].numCharMatch)
-        cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
-                             config.fontHiligthB);
+        cairo_set_source_rgba(cr, config.fontR, config.fontG, config.fontB,
+                              config.selectedAlpha);
       else
         cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
       cairo_show_text(cr, temp);
-      cairo_rel_move_to(cr, visibleWindowsArray[i].charExtA[j].x_bearing, 0);
+      // cairo_rel_move_to(cr, visibleWindowsArray[i].charExtA[j].x_bearing, 0);
     }
   }
-  /* for (uint32_t j = 0; j < visibleWindowsArray[i].numCharMatch; j++) { */
-  /*   temp[0] = visibleWindowsArray[i].as[j]; */
-  //  cairo_set_source_rgb(cr, config.fontHiligthR, config.fontHiligthG,
-  //                      config.fontHiligthB);
-  /*   cairo_show_text(cr, temp); */
-  /*   cairo_rel_move_to(cr, */
-  /*                  visibleWindowsArray[i].charExtA[j].x_advance, */
-  /*                 0); */
-  /* } */
   cairo_stroke(cr);
+  //  gtk_widget_show(gtkWin);
 }
 
-static gboolean on_draw_event(GtkWidget *widget, cairo_t *cr,
-                              gpointer user_data) {
+static gboolean drawCallback(GtkWidget *widget, cairo_t *cr,
+                             gpointer user_data) {
+  printf("\nIn draw callback");
   do_drawing(cr);
   return FALSE;
 }
@@ -198,6 +140,7 @@ void requestWindowChange(windowInfo_t winToActivate) {
   usleep(500); // This is required when quitting sometimes does not honor
 }
 void printVisibleWindows() {
+  printf("\nTotal windows: %d", numVisibleWindows);
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     printf("\n %d: Win ID:%d", i, visibleWindowsArray[i].winId);
     printf(" Desk: %d", visibleWindowsArray[i].desktop);
@@ -206,6 +149,7 @@ void printVisibleWindows() {
            visibleWindowsArray[i].height, visibleWindowsArray[i].charWidth);
 
     printf(" as: %s", visibleWindowsArray[i].as);
+    printf(" noMathc: %d",visibleWindowsArray[i].noMatch);
   }
   fflush(stdout);
 }
@@ -225,8 +169,11 @@ void getVisibleWindows() {
   xcb_get_property_cookie_t propCookie;
   propCookie = xcb_ewmh_get_client_list(ewmh_con, 0);
   xcb_ewmh_get_client_list_reply(ewmh_con, propCookie, &windowsReply, NULL);
+  xcb_flush(xcb_con);
   visibleWindowsArray =
       (windowInfo_t *)malloc(windowsReply.windows_len * sizeof(windowInfo_t));
+  printf("\nWin len: %d", windowsReply.windows_len);
+  fflush(stdout);
   for (uint32_t i = 0; i < windowsReply.windows_len; i++) {
     /*Get Window Attribute 0 is unmapped, 1 is visible and 2 is not*/
     xcb_get_window_attributes_cookie_t winAtriCookie =
@@ -255,11 +202,11 @@ void getVisibleWindows() {
       visibleWindowsArray[numVisibleWindows].height = wheight;
       visibleWindowsArray[numVisibleWindows].x = x;
       visibleWindowsArray[numVisibleWindows].y = y;
+      visibleWindowsArray[numVisibleWindows].noMatch = FALSE;
       numVisibleWindows++;
-      if (numVisibleWindows > MAXWINDOWS - 1)
-        return;
     }
   }
+  xcb_ewmh_get_windows_reply_wipe(&windowsReply);
 }
 
 int connectToServers() {
@@ -271,11 +218,16 @@ int connectToServers() {
   /* Open the connection to the XCB server */
   xcb_con = xcb_connect(NULL, NULL);
   if (xcb_connection_has_error(xcb_con)) {
+    printf("XCB has erros!!");
     return EXIT_FAILURE;
   }
 
- // load_atoms(xcb_con);
+  // load_atoms(&xcb_con);
   /////// Get the first screen */
+  const xcb_setup_t *set;
+  set = xcb_get_setup(xcb_con);
+  const xcb_setup_t *xcb_get_setup(xcb_connection_t * c);
+  printf("Num Roofs %d", set->roots_len);
   screen = xcb_setup_roots_iterator(xcb_get_setup(xcb_con)).data;
   /*Open the connection to ewmh*/
   ewmh_con = malloc(sizeof(xcb_ewmh_connection_t));
@@ -286,44 +238,43 @@ int connectToServers() {
     return EXIT_FAILURE;
   } else
     puts("EWHM init succes");
-
   return 0;
 }
 void destroyWindow() {
-  gtk_widget_queue_draw(gtkWin);
   xcb_flush(xcb_con);
   xcb_disconnect(xcb_con);
   XCloseDisplay(disp_con);
+  usleep(1000);
+  gtk_widget_destroy(gtkWin);
+  gtk_main_quit();
 }
-gboolean keypress_function(GtkWidget *widget, GdkEventKey *event,
-                           gpointer data) {
-
-  // Reset timer to quit
+gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event,
+                          gpointer data) {
+  // Reset timer to quit application
   g_source_remove(gTimerQuit);
-
-  gTimerQuit = g_timeout_add(config.timeOut, timeOut, NULL);
+  gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
 
   // Quit application
   if (event->keyval == config.quitChar || event->keyval == GDK_KEY_Escape) {
     returnHome();
     destroyWindow();
-    fflush(stdout);
     gtk_main_quit();
     return FALSE;
   }
+  printf("\nChar key: %c", event->keyval);
   // If we have a keyboard match redraw
+  gtk_widget_queue_draw(gtkWin);
   if (labelMatch(event->keyval)) {
-    gtk_widget_queue_draw(gtkWin);
+    // gtk_widget_queue_draw(gtkWin);
   }
   return FALSE;
 }
 void disconnect() { xcb_disconnect(xcb_con); }
 
-gint timeOut() {
+gint timeOutCallback() {
   printf("\nTimeoOut");
   returnHome();
   destroyWindow();
-  gtk_main_quit();
 }
 
 int main(int argc, char *argv[]) {
@@ -335,7 +286,6 @@ int main(int argc, char *argv[]) {
   selectionSort(visibleWindowsArray, numVisibleWindows);
   getDesktopsInfo();
   labelWindows();
-  calFontPosition();
   printVisibleWindows();
 
   if (numVisibleWindows == 1) {
@@ -344,9 +294,8 @@ int main(int argc, char *argv[]) {
   }
   gtk_init(&argc, &argv);
   gtkInitWindow();
-
-  gTimerQuit = g_timeout_add(config.timeOut, timeOut, NULL);
-  gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
+  gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
+  gtk_widget_show_all(gtkWin);
   gtk_main();
   return 0;
 }
@@ -358,7 +307,6 @@ void swap(windowInfo_t *xp, windowInfo_t *yp) {
 // Function to perform Selection Sort
 void selectionSort(windowInfo_t input[], int n) {
   int i, j, min_idx;
-
   // One by one move boundary of unsorted subarray
   for (i = 0; i < n - 1; i++) {
 
@@ -497,5 +445,41 @@ void labelWindows() {
           break;
       }
     }
+  }
+}
+
+xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) {
+  xcb_intern_atom_cookie_t atom_cookie;
+  xcb_atom_t atom;
+  xcb_intern_atom_reply_t *rep;
+
+  atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name);
+  rep = xcb_intern_atom_reply(c, atom_cookie, NULL);
+  if (NULL != rep) {
+    atom = rep->atom;
+    free(rep);
+    printf("\natom: %x", atom);
+    fflush(stdout);
+    return atom;
+  }
+  printf("\nError getting atom.\n");
+  exit(1);
+}
+
+void load_atoms(xcb_connection_t *c) {
+  /* load atoms */
+  xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX];
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    atom_cookies[i] =
+        xcb_intern_atom(c, 0, /* "atom created if it doesn't already exist"
+                               */
+                        SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name);
+  }
+  for (int i = 0; i < SB_ATOM_MAX; i++) {
+    xcb_intern_atom_reply_t *reply =
+        xcb_intern_atom_reply(c, atom_cookies[i], NULL);
+    atoms[i] = reply->atom;
+    //    printf("\nAtom:%d", atoms[i]);
+    free(reply);
   }
 }

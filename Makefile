@@ -5,7 +5,7 @@
 
 # Makefile for 9wm-xcb
 PKGCONFIG = $(shell which pkg-config)
-CFLAGS = -O2  $(shell $(PKGCONFIG) --cflags gtk+-3.0)
+CFLAGS = -O2 $(shell $(PKGCONFIG) --cflags gtk+-3.0)
 CFLAGS_DBG = -g -O0 -DDEBUG -DDEBUG_EV $(CFLAGS)
 LDFLAGS = -lX11 -lXmu -lxcb -lxcb-util -lxcb-icccm -lxcb-ewmh  -lxcb-image -lxcb-shape -lcairo $(shell $(PKGCONFIG) --libs gtk+-3.0)
 PREFIX=/opt
