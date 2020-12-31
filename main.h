@@ -3,15 +3,20 @@
 #include "atoms.h"
 #include <X11/Xlib.h>
 #include <X11/Xmu/WinUtil.h>
+#include <cairo-ft.h>
 #include <cairo/cairo.h>
+#include <ft2build.h>
 #include <gtk/gtk.h>
 #include <inttypes.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
+#include FT_FREETYPE_H
+
 #define MAXLABELLENGTH 50
 
 typedef struct color_t {
@@ -48,7 +53,7 @@ typedef struct windowsInfo_t {
   uint32_t noMatch;
   uint32_t fontPosX;
   uint32_t fontPosY;
-  rect_t rect;
+  rect_t rbackRect;
 } windowInfo_t;
 
 typedef struct desktopInfo_t {
@@ -68,7 +73,8 @@ typedef struct {
   gboolean ignoreSticky;
   rectConfig_t rect;
   char labelString[MAXLABELLENGTH];
-  char font[];
+  cairo_font_face_t *cff;
+  char fontPath[];
 } configuration_t;
 
 configuration_t config = {
@@ -81,13 +87,15 @@ configuration_t config = {
     .fontColor.b = 0.945098,
     .selectedAlpha = 0.3,
     .ignoreSticky = FALSE,
-    .rect.radius =10,
-    .rect.color.r=0.99216,
-    .rect.color.g=1.0,
-    .rect.color.b=0.945098,
-    .rect.color.alpha=0.1,
+    .rect.radius = 9.6,
+    .rect.color.r = 0.99216,
+    .rect.color.g = 1.0,
+    .rect.color.b = 0.945098,
+    .rect.color.alpha = 0.1,
+    //.labelString = "FIJGHDKSLALE\0",
     .labelString = "fjdklaghei;nvop\0",
-    .font = "Serif",
+    //.font = "Ubuntu Mono",
+    .fontPath = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
 };
 uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
 
@@ -103,7 +111,10 @@ void selectionSort(windowInfo_t inpput[], int n);
 void swap(windowInfo_t *xp, windowInfo_t *yp);
 void getDesktopsInfo();
 void labelWindows();
+void loadFont();
 //Config functions for parameters
+
+void initConfig();
 int configFontColor(char *input);
 int configFontSize(char *input);
 int configFontAlpha(char *input);
@@ -122,6 +133,7 @@ uint32_t curentActiveDesktop;  // Used to got back to it when we exit and
 xcb_window_t currentActiveWin; // Used to go back to it when we do nothing
 gboolean posiInitalized = FALSE;
 uint32_t charMatchIndex = 0; // Holds how many charcters we have matched
+
 // GTK Stuff
 GtkWidget *gtkWin; //The gtik window really is a widget
 gint gTimerQuit;   //The GTK timer reference
@@ -145,7 +157,7 @@ const char help[]={
 "Actions:\n"
 "  -t <TIME>   Set timeout period in seconds, 0 for no timeout\n"
 "  -s <SIZE>   Set the font size in pixels \n"
-"  -f <NAME>   Set the font name\n"
+"  -f <FILE>   Set the ttf font path name\n"
 "  -a <ALPHA>  Set the inactive font alpha alpha \n"
 "  -c <ALPHA>  Set the font color format is hex color FFFFFF \n"
 "  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0  \n"

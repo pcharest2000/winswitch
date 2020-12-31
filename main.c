@@ -125,9 +125,24 @@ int configFontSize(char *input) {
     return EXIT_FAILURE;
   }
   config.fontSize = size;
+  config.rect.radius = config.fontSize * 0.15;
   return 0;
 }
 
+int configFontPath(char *input) {
+  free(config.cff);
+  FT_Library value;
+  FT_Error status;
+  FT_Face face;
+
+  status = FT_Init_FreeType(&value);
+  status = FT_New_Face(value, input, 0, &face);
+  if (status != 0) {
+    fprintf(stderr, "Error %d opening %s.\n", status, input);
+  }
+  config.cff = cairo_ft_font_face_create_for_ft_face(face, 0);
+  return 0;
+}
 int configFontColor(char *input) {
   //VddFunction takes hexadeciin
   //male
@@ -160,10 +175,13 @@ void draw_rounded_path(cairo_t *ctx, double x, double y, double width, double he
 static void do_drawing(cairo_t *cr) {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
   // We calcu;ate the font extent only once and fill the info
-  cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
-  cairo_set_font_size(cr, config.fontSize);
+  //cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
   if (!posiInitalized) {
-    cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    //if font face is null revert to cairo internal
+    if (config.cff == NULL)
+      cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+    else
+      cairo_set_font_face(cr, config.cff);
     cairo_set_font_size(cr, config.fontSize);
     posiInitalized = TRUE;
     cairo_text_extents_t te; // tmp extent
@@ -171,27 +189,29 @@ static void do_drawing(cairo_t *cr) {
     for (uint32_t i = 0; i < numVisibleWindows; i++) {
       visibleWindowsArray[i].numCharMatch = 0;
       cairo_text_extents(cr, visibleWindowsArray[i].as, &te);
-      visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 - (te.width / 2+te.x_bearing);
-      visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y + visibleWindowsArray[i].height / 2 -(te.height / 2+te.y_bearing);
-      visibleWindowsArray[i].rect.x = visibleWindowsArray[i].fontPosX+te.x_bearing-0.3*te.width/2;
-      visibleWindowsArray[i].rect.y = visibleWindowsArray[i].fontPosY+te.y_bearing-0.3*te.height/2;
-      visibleWindowsArray[i].rect.width = te.width*1.3;
-      visibleWindowsArray[i].rect.heigth = te.height*1.3;
+      visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 - (te.width / 2 + te.x_bearing);
+      visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y + visibleWindowsArray[i].height / 2 - (te.height / 2 + te.y_bearing);
+      visibleWindowsArray[i].rbackRect.x = visibleWindowsArray[i].fontPosX + te.x_bearing - 0.3 * te.width / 2;
+      visibleWindowsArray[i].rbackRect.y = visibleWindowsArray[i].fontPosY + te.y_bearing - 0.3 * te.height / 2;
+      visibleWindowsArray[i].rbackRect.width = te.width * 1.3;
+      visibleWindowsArray[i].rbackRect.heigth = te.height * 1.3;
     }
   }
-
+  //Do the real drawing
   // Clear the screen
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr, 0, 0.0, 0, config.winAlpha);
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
-  char temp[] = " ";
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].noMatch) {
       continue;
     }
-    draw_rounded_path(cr, visibleWindowsArray[i].rect.x, visibleWindowsArray[i].rect.y, visibleWindowsArray[i].rect.width, visibleWindowsArray[i].rect.heigth, config.rect.radius);
+    char temp[] = " ";
+    cairo_set_font_size(cr, config.fontSize);
+    cairo_set_font_face(cr, config.cff);
+    draw_rounded_path(cr, visibleWindowsArray[i].rbackRect.x, visibleWindowsArray[i].rbackRect.y, visibleWindowsArray[i].rbackRect.width, visibleWindowsArray[i].rbackRect.heigth, config.rect.radius);
     cairo_move_to(cr, visibleWindowsArray[i].fontPosX, visibleWindowsArray[i].fontPosY);
     for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
@@ -363,14 +383,13 @@ int parseArguments(int argc, char *argv[]) {
   if (argc == 2 && argv[1]) {
     if (strcmp(argv[1], "--help") == 0) {
       fputs(help, stdout);
-      return EXIT_SUCCESS;
+      exit(EXIT_SUCCESS);
     } else if (strcmp(argv[1], "-h") == 0) {
       fputs(help, stdout);
-      printf("Hello");
-      return EXIT_SUCCESS;
+      exit(EXIT_SUCCESS);
     } else if (strcmp(argv[1], "--version") == 0) {
       puts(VERSION);
-      return EXIT_SUCCESS;
+      exit(EXIT_SUCCESS);
     }
   }
 
@@ -378,8 +397,11 @@ int parseArguments(int argc, char *argv[]) {
   // put ':' in the starting of the
   // string so that program can
   //distinguish between '?' and ':'
-  while ((opt = getopt(argc, argv, "ic:s:a:t:w:S:")) != -1) {
+  while ((opt = getopt(argc, argv, "ic:s:a:t:w:S:f:")) != -1) {
     switch (opt) {
+    case 'f':
+      configFontPath(optarg);
+      break;
     case 'c':
       configFontColor(optarg);
       break;
@@ -425,10 +447,11 @@ int parseArguments(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-  if (parseArguments(argc, argv) == EXIT_SUCCESS) {
-    return 0;
-  }
-
+  loadFont();
+  parseArguments(argc, argv);
+  /* if (parseArguments(argc, argv) == EXIT_SUCCESS) { */
+  /*   return 0; */
+  /* } */
   if (connectToServers()) {
     printf("Cannot connect to X");
     return 0;
@@ -624,4 +647,33 @@ void load_atoms(xcb_connection_t *c) {
     //    printf("\nAtom:%d", atoms[i]);
     free(reply);
   }
+}
+#include <cairo-ft.h>
+#include <cairo.h>
+#include <ft2build.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include FT_SFNT_NAMES_H
+#include FT_FREETYPE_H
+#include FT_GLYPH_H
+#include FT_OUTLINE_H
+#include FT_BBOX_H
+#include FT_TYPE1_TABLES_H
+
+void loadFont() {
+
+  FT_Library value;
+  FT_Error status;
+  FT_Face face;
+
+  status = FT_Init_FreeType(&value);
+  if (status != 0) {
+    fprintf(stderr, "Error %d opening library.\n", status);
+    exit(EXIT_FAILURE);
+  }
+  status = FT_New_Face(value, config.fontPath, 0, &face);
+  if (status != 0) {
+    fprintf(stderr, "Error %d opening %s.\n", status, config.fontPath);
+  }
+  config.cff = cairo_ft_font_face_create_for_ft_face(face, 0);
 }
