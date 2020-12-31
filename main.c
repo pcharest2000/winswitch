@@ -1,10 +1,9 @@
-
 /* license {{{ */
 /*
 
 winswitch
-A command line tool to change windows with an overlay on dekstops to switch window.
-Mostly used for tiling window managers
+A command line tool to change the active windows with the keyboard, display  an overlay
+on dekstops to switch window, ostly used for tiling window managers
 
 Author, current maintainer: Philippe Charest <philippe.charest@gmail.com>
 
@@ -22,7 +21,6 @@ GNU General Public License for more details.
 
 To get a copy of the GNU General Puplic License,  write to the
 Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-
 */
 /* }}} */
 #include "main.h"
@@ -58,6 +56,7 @@ gboolean labelMatch(char input) {
   }
   return FALSE;
 }
+
 void gtkInitWindow() {
   gtkWin = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_widget_set_app_paintable(gtkWin, TRUE);
@@ -70,7 +69,6 @@ void gtkInitWindow() {
   if (visual != NULL && gdk_screen_is_composited(gdkscreen)) {
     gtk_widget_set_visual(gtkWin, visual);
   }
-  /* cr = gdk_drawing_context_get_cairo_context(gtkWindow); */
   g_signal_connect(G_OBJECT(gtkWin), "draw", G_CALLBACK(drawCallback), NULL);
   g_signal_connect(gtkWin, "destroy", G_CALLBACK(gtk_main_quit), NULL);
   g_signal_connect(G_OBJECT(gtkWin), "key_press_event", G_CALLBACK(keypressCallback), NULL);
@@ -84,13 +82,13 @@ int configLabel(char *input) {
     fprintf(stderr, "\n Invalid string length for label must be between 2 and %d", MAXLABELLENGTH);
     return EXIT_FAILURE;
   }
-  config.labelString[0]='\0';
+  config.labelString[0] = '\0';
   strcat(config.labelString, input);
-  numCharInLabelString=strlen(config.labelString);
+  numCharInLabelString = strlen(config.labelString);
   return 0;
 }
-int configTimeOut(char *input) {
 
+int configTimeOut(char *input) {
   int timeOut;
   if (sscanf(input, "%d", &timeOut) == EOF || timeOut < 0) {
     fprintf(stderr, "\n Invalid option must be 0 or greater");
@@ -131,7 +129,6 @@ int configFontSize(char *input) {
 }
 
 int configFontColor(char *input) {
-  printf("\n Input:%s,input", input);
   //VddFunction takes hexadeciin
   //male
   if (strlen(input) != 6) {
@@ -141,12 +138,25 @@ int configFontColor(char *input) {
   int r, g, b;
   //printf("%s",input);
   sscanf(input, "%02x%02x%02x", &r, &g, &b);
-  config.fontR = r / 255.0;
-  config.fontB = b / 255.0;
-  config.fontG = g / 255.0;
+  config.fontColor.r = r / 255.0;
+  config.fontColor.g = g / 255.0;
+  config.fontColor.b = b / 255.0;
   return 0;
   /* printf("\n R: %f G: %f B: %f", config.fontR, config.fontG, config.fontB); */
 }
+
+void draw_rounded_path(cairo_t *ctx, double x, double y, double width, double height, double radius) {
+  double degrees = M_PI / 180.0;
+  cairo_set_source_rgba(ctx, config.rect.color.r, config.rect.color.g, config.rect.color.b, config.rect.color.alpha);
+  cairo_new_path(ctx);
+  cairo_arc(ctx, x + width - radius, y + radius, radius, -90 * degrees, 0 * degrees);
+  cairo_arc(ctx, x + width - radius, y + height - radius, radius, 0 * degrees, 90 * degrees);
+  cairo_arc(ctx, x + radius, y + height - radius, radius, 90 * degrees, 180 * degrees);
+  cairo_arc(ctx, x + radius, y + radius, radius, 180 * degrees, 270 * degrees);
+  cairo_close_path(ctx);
+  cairo_fill(ctx);
+}
+
 static void do_drawing(cairo_t *cr) {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
   // We calcu;ate the font extent only once and fill the info
@@ -156,14 +166,17 @@ static void do_drawing(cairo_t *cr) {
     cairo_select_font_face(cr, config.font, CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
     cairo_set_font_size(cr, config.fontSize);
     posiInitalized = TRUE;
-    printf("Hello");
     cairo_text_extents_t te; // tmp extent
-    char tmp[] = " ";
+    //:wchar tmp[] = " ";
     for (uint32_t i = 0; i < numVisibleWindows; i++) {
       visibleWindowsArray[i].numCharMatch = 0;
       cairo_text_extents(cr, visibleWindowsArray[i].as, &te);
-      visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 - te.width / 2;
-      visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y + visibleWindowsArray[i].height / 2 + config.fontSize / 2;
+      visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 - (te.width / 2+te.x_bearing);
+      visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y + visibleWindowsArray[i].height / 2 -(te.height / 2+te.y_bearing);
+      visibleWindowsArray[i].rect.x = visibleWindowsArray[i].fontPosX+te.x_bearing-0.3*te.width/2;
+      visibleWindowsArray[i].rect.y = visibleWindowsArray[i].fontPosY+te.y_bearing-0.3*te.height/2;
+      visibleWindowsArray[i].rect.width = te.width*1.3;
+      visibleWindowsArray[i].rect.heigth = te.height*1.3;
     }
   }
 
@@ -172,26 +185,27 @@ static void do_drawing(cairo_t *cr) {
   cairo_set_source_rgba(cr, 0, 0.0, 0, config.winAlpha);
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
+
   char temp[] = " ";
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].noMatch) {
       continue;
     }
+    draw_rounded_path(cr, visibleWindowsArray[i].rect.x, visibleWindowsArray[i].rect.y, visibleWindowsArray[i].rect.width, visibleWindowsArray[i].rect.heigth, config.rect.radius);
     cairo_move_to(cr, visibleWindowsArray[i].fontPosX, visibleWindowsArray[i].fontPosY);
     for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
       if (j + 1 <= visibleWindowsArray[i].numCharMatch)
-        cairo_set_source_rgba(cr, config.fontR, config.fontG, config.fontB, config.selectedAlpha);
+        cairo_set_source_rgba(cr, config.fontColor.r, config.fontColor.g, config.fontColor.g, config.selectedAlpha);
       else
-        cairo_set_source_rgb(cr, config.fontR, config.fontG, config.fontB);
+        cairo_set_source_rgb(cr, config.fontColor.r, config.fontColor.g, config.fontColor.b);
       cairo_show_text(cr, temp);
     }
   }
   cairo_stroke(cr);
 }
 
-static gboolean drawCallback(GtkWidget *widget, cairo_t *cr,
-                             gpointer user_data) {
+static gboolean drawCallback(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
   printf("\nIn draw callback");
   do_drawing(cr);
   return FALSE;
@@ -205,6 +219,7 @@ void returnHome() {
   xcb_flush(xcb_con);
   usleep(500);
 }
+
 void requestWindowChange(windowInfo_t winToActivate) {
   ///We also move the cursor to the new window we are so nice!
   xcb_warp_pointer(xcb_con, XCB_NONE, winToActivate.winId, 10, 10, 20, 20, 20, 20);
@@ -212,6 +227,7 @@ void requestWindowChange(windowInfo_t winToActivate) {
   xcb_flush(xcb_con);
   usleep(500); // This is required when quitting sometimes does not honor
 }
+
 void printVisibleWindows() {
   printf("\nTotal windows: %d", numVisibleWindows);
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
@@ -223,6 +239,7 @@ void printVisibleWindows() {
   }
   fflush(stdout);
 }
+
 void getVisibleWindows() {
   // Get the current window that is active
   xcb_ewmh_get_active_window_reply(ewmh_con, xcb_ewmh_get_active_window(ewmh_con, 0), &currentActiveWin, NULL);
@@ -297,6 +314,7 @@ int connectToServers() {
     puts("\nEWHM init succes");
   return 0;
 }
+
 void destroyWindow() {
   xcb_flush(xcb_con);
   xcb_disconnect(xcb_con);
@@ -305,6 +323,7 @@ void destroyWindow() {
   gtk_widget_destroy(gtkWin);
   gtk_main_quit();
 }
+
 gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event,
                           gpointer data) {
   // Reset the timer to quit application
@@ -345,16 +364,21 @@ int parseArguments(int argc, char *argv[]) {
     if (strcmp(argv[1], "--help") == 0) {
       fputs(help, stdout);
       return EXIT_SUCCESS;
+    } else if (strcmp(argv[1], "-h") == 0) {
+      fputs(help, stdout);
+      printf("Hello");
+      return EXIT_SUCCESS;
     } else if (strcmp(argv[1], "--version") == 0) {
       puts(VERSION);
       return EXIT_SUCCESS;
     }
   }
+
   int opt;
   // put ':' in the starting of the
   // string so that program can
   //distinguish between '?' and ':'
-  while ((opt = getopt(argc, argv, "ihc:s:a:t:w:S:")) != -1) {
+  while ((opt = getopt(argc, argv, "ic:s:a:t:w:S:")) != -1) {
     switch (opt) {
     case 'c':
       configFontColor(optarg);
@@ -399,6 +423,7 @@ int parseArguments(int argc, char *argv[]) {
 
   return 1;
 }
+
 int main(int argc, char *argv[]) {
   if (parseArguments(argc, argv) == EXIT_SUCCESS) {
     return 0;
@@ -427,11 +452,13 @@ int main(int argc, char *argv[]) {
   gtk_main();
   return 0;
 }
+
 void swap(windowInfo_t *xp, windowInfo_t *yp) {
   windowInfo_t temp = *xp;
   *xp = *yp;
   *yp = temp;
 }
+
 // Function to perform Selection Sort
 void selectionSort(windowInfo_t input[], int n) {
   int i, j, min_idx;
@@ -458,8 +485,7 @@ void getDesktopsInfo() {
     }
   }
 
-  visibleDesktopsArray =
-      (desktopInfo_t *)malloc(numVisibleDesktops * sizeof(desktopInfo_t));
+  visibleDesktopsArray = (desktopInfo_t *)malloc(numVisibleDesktops * sizeof(desktopInfo_t));
 
   if (numVisibleDesktops == 1) {
     visibleDesktopsArray[0].indexWindow = 0;
@@ -491,6 +517,7 @@ void getDesktopsInfo() {
     visibleDesktopsArray[arrayIndex].firstChar = config.labelString[arrayIndex];
   }
 }
+
 void printDesktopInfo() {
   printf("\nTotal Visible Desktops: %d", numVisibleDesktops);
   // Printt desktop info
@@ -498,6 +525,7 @@ void printDesktopInfo() {
     printf("\nDesk info: D: %d  WT:  %d  ind: %d Char %c", visibleDesktopsArray[i].desktopNum, visibleDesktopsArray[i].numWindows, visibleDesktopsArray[i].indexWindow, visibleDesktopsArray[i].firstChar);
   }
 }
+
 void labelWindows() {
   // This is a speciale case where we have only one desktop
   if (numVisibleDesktops == 1) {
@@ -545,10 +573,6 @@ void labelWindows() {
 
       while (1) {
         for (uint32_t i = startingWindow; i <= endWindow; i++) {
-          // Make sure we don't use the desktop character
-          /* if (visibleDesktopsArray[k].firstChar == homeRow[homeCharIndex])
-           */
-          /*   homeCharIndex++; */
           visibleWindowsArray[i].as[charIndex] = config.labelString[homeCharIndex];
           visibleWindowsArray[i].as[charIndex + 1] = '\0';
           visibleWindowsArray[i].charWidth = charWidth;
@@ -572,7 +596,6 @@ xcb_atom_t getatom(xcb_connection_t *c, char *atom_name) {
   xcb_intern_atom_cookie_t atom_cookie;
   xcb_atom_t atom;
   xcb_intern_atom_reply_t *rep;
-
   atom_cookie = xcb_intern_atom(c, 0, strlen(atom_name), atom_name);
   rep = xcb_intern_atom_reply(c, atom_cookie, NULL);
   if (NULL != rep) {
@@ -591,8 +614,7 @@ void load_atoms(xcb_connection_t *c) {
   xcb_intern_atom_cookie_t atom_cookies[SB_ATOM_MAX];
   for (int i = 0; i < SB_ATOM_MAX; i++) {
     atom_cookies[i] =
-        xcb_intern_atom(c, 0, /* "atom created if it doesn't already exist"
-                               */
+        xcb_intern_atom(c, 0,
                         SB_ATOM_STRING[i].len, SB_ATOM_STRING[i].name);
   }
   for (int i = 0; i < SB_ATOM_MAX; i++) {

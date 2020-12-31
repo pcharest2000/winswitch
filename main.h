@@ -6,14 +6,34 @@
 #include <cairo/cairo.h>
 #include <gtk/gtk.h>
 #include <inttypes.h>
+#include <math.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
+#define MAXLABELLENGTH 50
 
-#define  MAXLABELLENGTH 50
+typedef struct color_t {
+  float r;
+  float g;
+  float b;
+  float alpha;
+} color_t;
 
+typedef struct rect_t {
+  uint32_t x;
+  uint32_t y;
+  uint32_t width;
+  uint32_t heigth;
+  float radius;
+  color_t color;
+} rect_t;
+
+typedef struct rectConfig_t {
+  float radius;
+  color_t color;
+} rectConfig_t;
 
 typedef struct windowsInfo_t {
   xcb_window_t winId;
@@ -28,6 +48,7 @@ typedef struct windowsInfo_t {
   uint32_t noMatch;
   uint32_t fontPosX;
   uint32_t fontPosY;
+  rect_t rect;
 } windowInfo_t;
 
 typedef struct desktopInfo_t {
@@ -42,30 +63,33 @@ typedef struct {
   uint32_t timeOut; // = 10; // seconds
   double fontSize;  // = 64.0;
   char quitChar;
-  float fontR;
-  float fontG;
-  float fontB;
+  color_t fontColor;
   float selectedAlpha;
   gboolean ignoreSticky;
+  rectConfig_t rect;
   char labelString[MAXLABELLENGTH];
   char font[];
-} configuration;
+} configuration_t;
 
-
-configuration config = {
+configuration_t config = {
     .winAlpha = 0.4,
     .timeOut = 10,
     .fontSize = 64.0,
     .quitChar = 'q',
-    .fontR = 0.99216, //FontColor
-    .fontG = 1.0,
-    .fontB = 0.945098,
+    .fontColor.r = 0.99216,
+    .fontColor.g = 1.0,
+    .fontColor.b = 0.945098,
     .selectedAlpha = 0.3,
-    .ignoreSticky=FALSE,
-    .labelString= "fjdklaghei;nvop\0",
+    .ignoreSticky = FALSE,
+    .rect.radius =10,
+    .rect.color.r=0.99216,
+    .rect.color.g=1.0,
+    .rect.color.b=0.945098,
+    .rect.color.alpha=0.1,
+    .labelString = "fjdklaghei;nvop\0",
     .font = "Serif",
 };
- uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
+uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
 
 void getVisibleWindows();
 void printVisibleWindows();
@@ -113,26 +137,28 @@ gint timeOutCallback(); // Function to exit when timer expires
 /* help {{{ */
 /* #define HELP */
 const char help[]={
-  "winswitch " VERSION "\n"
-  "Usage: winswitch [OPTION]...overlay to change windows using the keyboard mostly used with tiling window managers. \n"
-  "Get help:   --help \n"
-  "Actions:\n"
-  "  -t <TIME>           Set timeout period in seconds, 0 for no timeout\n"
-  "  -s <SIZE>           Set the font size in pixels \n"
-  "  -f <NAME>           Set the font name\n"
-  "  -a <ALPHA>          Set the inactive font alpha alpha \n"
-  "  -c <ALPHA>          Set the font color format is hex color FFFFFF \n"
-  "  -w <ALPHA>         Set the window alpha must be between 0.0 and 1.0  \n"
-  "  -a                  Ignore sticky windows, some applications (docks) do not  \n"
-  "                      set properly its window property \n"
-  "  -S                  A string of characters used to label the windows must be at least 2 character long, \n"
-  "                      and more than the number of active desktops, characters must be not repeated or behavior\n"
-  "                      behavior of the app is undefined\n"
+"winswitch " VERSION "\n"
+"Usage: winswitch [OPTION]\n"
+"A command line tool to switch the active window using the keyboard, display  an overlay\n"
+"on dekstops to select window, mostly used for tiling window managers\n"
+"Get help:   --help \n"
+"Actions:\n"
+"  -t <TIME>   Set timeout period in seconds, 0 for no timeout\n"
+"  -s <SIZE>   Set the font size in pixels \n"
+"  -f <NAME>   Set the font name\n"
+"  -a <ALPHA>  Set the inactive font alpha alpha \n"
+"  -c <ALPHA>  Set the font color format is hex color FFFFFF \n"
+"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0  \n"
+"  -a          Ignore sticky windows, some applications (docks) do not  \n"
+"              set properly its window property \n"
+"  -S          A string of characters used to label the windows must be at least 2 character long, \n"
+"              and more than the number of active desktops, characters must be not repeated or behavior\n"
+"              behavior of the app is undefined\n"
 
-  "  -h or --help  for this listing \n"
-  "Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \
-  "Released under the GNU General Public License.\n"
-  "Copyright (C) 2020\n"};
+"  -h or --help  for this listing \n"
+"Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \
+"Released under the GNU General Public License.\n"
+"Copyright (C) 2020\n"};
 /* /\* }}} *\/ */
 
 /* // clang-format off */
