@@ -30,7 +30,7 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 gboolean labelMatch(char input) {
   uint32_t match = 0;
   // Is the character is not part of the string if not exit
-  if (!strchr(labelString, input)) {
+  if (!strchr(config.labelString, input)) {
     printf("\nNoMatch");
     return FALSE;
   }
@@ -79,40 +79,59 @@ void gtkInitWindow() {
   gtk_window_move(GTK_WINDOW(gtkWin), 0, 0);
 }
 
-int configTimeOut(char *input){
+int configLabel(char *input) {
+  if (strlen(input) > MAXLABELLENGTH || strlen(input) < 2) {
+    fprintf(stderr, "\n Invalid string length for label must be between 2 and %d", MAXLABELLENGTH);
+    return EXIT_FAILURE;
+  }
+  config.labelString[0]='\0';
+  strcat(config.labelString, input);
+  numCharInLabelString=strlen(config.labelString);
+  return 0;
+}
+int configTimeOut(char *input) {
 
   int timeOut;
-  if (sscanf(input, "%d", &timeOut) == EOF || timeOut < 0 ) {
+  if (sscanf(input, "%d", &timeOut) == EOF || timeOut < 0) {
     fprintf(stderr, "\n Invalid option must be 0 or greater");
     return EXIT_FAILURE;
   }
   config.timeOut = timeOut;
 
-return 0;
+  return 0;
 }
-int configFontAlpha(char *input){
 
+int configWindowAlpha(char *input) {
   float alpha;
-  if (sscanf(input, "%f", &alpha) == EOF || alpha>1.0 || alpha<0.0) {
+  if (sscanf(input, "%f", &alpha) == EOF || alpha > 1.0 || alpha < 0.0) {
     fprintf(stderr, "\n Invalid input for font alpha value must be float between 0 .0and 1.0");
     return EXIT_FAILURE;
   }
-  config.selectedAlpha =alpha;
+  config.winAlpha = alpha;
+  return 0;
+}
 
-return 0;
+int configFontAlpha(char *input) {
+  float alpha;
+  if (sscanf(input, "%f", &alpha) == EOF || alpha > 1.0 || alpha < 0.0) {
+    fprintf(stderr, "\n Invalid input for font alpha value must be float between 0 .0and 1.0");
+    return EXIT_FAILURE;
+  }
+  config.selectedAlpha = alpha;
+  return 0;
 }
 int configFontSize(char *input) {
   float size;
-  if (sscanf(input, "%f", &size) == EOF || size<1.0) {
+  if (sscanf(input, "%f", &size) == EOF || size < 1.0) {
     fprintf(stderr, "\n Invalid input for font size");
     return EXIT_FAILURE;
   }
-  config.fontSize =size;
+  config.fontSize = size;
   return 0;
 }
 
 int configFontColor(char *input) {
-  printf("\n Input:%s,input",input);
+  printf("\n Input:%s,input", input);
   //VddFunction takes hexadeciin
   //male
   if (strlen(input) != 6) {
@@ -225,11 +244,14 @@ void getVisibleWindows() {
     uint8_t state = winAttriReply->map_state;
     free(winAttriReply);
     if (state == XCB_MAP_STATE_VIEWABLE) {
-      visibleWindowsArray[numVisibleWindows].winId = windowsReply.windows[i];
       /*Get windows Destopps*/
-      uint32_t desk;
+      int32_t desk;
       xcb_ewmh_get_wm_desktop_reply(ewmh_con, xcb_ewmh_get_wm_desktop(ewmh_con, windowsReply.windows[i]), &desk, NULL);
       visibleWindowsArray[numVisibleWindows].desktop = desk;
+      if (desk == -1 && config.ignoreSticky == TRUE) {
+        continue;
+      }
+      visibleWindowsArray[numVisibleWindows].winId = windowsReply.windows[i];
       /*Get window Geometry*/
       int x, y, junkx, junky;
       unsigned int wwidth, wheight, bw, depth;
@@ -286,9 +308,9 @@ void destroyWindow() {
 gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event,
                           gpointer data) {
   // Reset the timer to quit application
-  if(config.timeOut>0){
-  g_source_remove(gTimerQuit);
-  gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
+  if (config.timeOut > 0) {
+    g_source_remove(gTimerQuit);
+    gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
   }
   // Quit application
   if (event->keyval == config.quitChar || event->keyval == GDK_KEY_Escape) {
@@ -314,11 +336,25 @@ gint timeOutCallback() {
 }
 
 int parseArguments(int argc, char *argv[]) {
+  if (argc == 1) {
+    return 1;
+  }
+  /* make "--help" and "--version" work. I don't want to use
+   * getopt_long for portability reasons */
+  if (argc == 2 && argv[1]) {
+    if (strcmp(argv[1], "--help") == 0) {
+      fputs(help, stdout);
+      return EXIT_SUCCESS;
+    } else if (strcmp(argv[1], "--version") == 0) {
+      puts(VERSION);
+      return EXIT_SUCCESS;
+    }
+  }
   int opt;
   // put ':' in the starting of the
   // string so that program can
   //distinguish between '?' and ':'
-  while ((opt = getopt(argc, argv, "c:s:a:t:")) != -1) {
+  while ((opt = getopt(argc, argv, "ihc:s:a:t:w:S:")) != -1) {
     switch (opt) {
     case 'c':
       configFontColor(optarg);
@@ -329,8 +365,20 @@ int parseArguments(int argc, char *argv[]) {
     case 'a':
       configFontAlpha(optarg);
       break;
+    case 'w':
+      configWindowAlpha(optarg);
+      break;
+    case 'S':
+      configLabel(optarg);
+      break;
     case 't':
       configTimeOut(optarg);
+      break;
+    case 'i':
+      config.ignoreSticky = TRUE;
+      break;
+    case 'h':
+      fputs(help, stdout);
       break;
     case ':':
       printf("\nOption needs a value");
@@ -349,10 +397,13 @@ int parseArguments(int argc, char *argv[]) {
 
   fflush(stdout);
 
-  return 0;
+  return 1;
 }
 int main(int argc, char *argv[]) {
-  parseArguments(argc, argv);
+  if (parseArguments(argc, argv) == EXIT_SUCCESS) {
+    return 0;
+  }
+
   if (connectToServers()) {
     printf("Cannot connect to X");
     return 0;
@@ -363,14 +414,14 @@ int main(int argc, char *argv[]) {
   labelWindows();
   printVisibleWindows();
 
-  if (numVisibleWindows == 1) {
+  if (numVisibleWindows <= 1) {
     destroyWindow();
     return 0;
   }
   gtk_init(&argc, &argv);
   gtkInitWindow();
-  if(config.timeOut>0){
-  gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
+  if (config.timeOut > 0) {
+    gTimerQuit = g_timeout_add_seconds(config.timeOut, timeOutCallback, NULL);
   }
   gtk_widget_show_all(gtkWin);
   gtk_main();
@@ -413,7 +464,7 @@ void getDesktopsInfo() {
   if (numVisibleDesktops == 1) {
     visibleDesktopsArray[0].indexWindow = 0;
     visibleDesktopsArray[0].desktopNum = Desk;
-    visibleDesktopsArray[0].firstChar = labelString[0];
+    visibleDesktopsArray[0].firstChar = config.labelString[0];
     visibleDesktopsArray[0].numWindows = numVisibleWindows;
   } else {
 
@@ -421,7 +472,7 @@ void getDesktopsInfo() {
     uint32_t arrayIndex = 0;
     uint32_t TotalWindows = 0;
     visibleDesktopsArray[0].indexWindow = 0;
-    visibleDesktopsArray[0].firstChar = labelString[0];
+    visibleDesktopsArray[0].firstChar = config.labelString[0];
     visibleDesktopsArray[0].desktopNum = Desk;
     for (uint32_t i = 1; i < numVisibleWindows; i++) {
       TotalWindows++;
@@ -429,7 +480,7 @@ void getDesktopsInfo() {
         visibleDesktopsArray[arrayIndex].numWindows = TotalWindows;
         Desk = visibleWindowsArray[i].desktop;
         arrayIndex++;
-        visibleDesktopsArray[arrayIndex].firstChar = labelString[arrayIndex];
+        visibleDesktopsArray[arrayIndex].firstChar = config.labelString[arrayIndex];
         visibleDesktopsArray[arrayIndex].indexWindow = i;
         visibleDesktopsArray[arrayIndex].desktopNum = Desk;
         TotalWindows = 0;
@@ -437,7 +488,7 @@ void getDesktopsInfo() {
     }
     visibleDesktopsArray[arrayIndex].numWindows = TotalWindows + 1;
     visibleDesktopsArray[arrayIndex].desktopNum = Desk;
-    visibleDesktopsArray[arrayIndex].firstChar = labelString[arrayIndex];
+    visibleDesktopsArray[arrayIndex].firstChar = config.labelString[arrayIndex];
   }
 }
 void printDesktopInfo() {
@@ -456,7 +507,7 @@ void labelWindows() {
     uint32_t charWidth = 1;
     while (1) {
       for (uint32_t i = startingWindow; i < numVisibleWindows; i++) {
-        visibleWindowsArray[i].as[charIndex] = labelString[homeCharIndex];
+        visibleWindowsArray[i].as[charIndex] = config.labelString[homeCharIndex];
         visibleWindowsArray[i].as[charIndex + 1] = '\0';
         visibleWindowsArray[i].charWidth = charWidth;
         if (numCharInLabelString - 1 > homeCharIndex) {
@@ -498,7 +549,7 @@ void labelWindows() {
           /* if (visibleDesktopsArray[k].firstChar == homeRow[homeCharIndex])
            */
           /*   homeCharIndex++; */
-          visibleWindowsArray[i].as[charIndex] = labelString[homeCharIndex];
+          visibleWindowsArray[i].as[charIndex] = config.labelString[homeCharIndex];
           visibleWindowsArray[i].as[charIndex + 1] = '\0';
           visibleWindowsArray[i].charWidth = charWidth;
           if (numCharInLabelString - 1 > homeCharIndex) {

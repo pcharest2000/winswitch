@@ -11,6 +11,10 @@
 #include <unistd.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
+
+#define  MAXLABELLENGTH 50
+
+
 typedef struct windowsInfo_t {
   xcb_window_t winId;
   int32_t desktop;
@@ -42,20 +46,26 @@ typedef struct {
   float fontG;
   float fontB;
   float selectedAlpha;
+  gboolean ignoreSticky;
+  char labelString[MAXLABELLENGTH];
   char font[];
 } configuration;
+
 
 configuration config = {
     .winAlpha = 0.4,
     .timeOut = 10,
     .fontSize = 64.0,
     .quitChar = 'q',
-    .fontR = 0.0, //FontColor
+    .fontR = 0.99216, //FontColor
     .fontG = 1.0,
-    .fontB = 0.0,
+    .fontB = 0.945098,
     .selectedAlpha = 0.3,
+    .ignoreSticky=FALSE,
+    .labelString= "fjdklaghei;nvop\0",
     .font = "Serif",
 };
+ uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
 
 void getVisibleWindows();
 void printVisibleWindows();
@@ -74,20 +84,18 @@ int configFontColor(char *input);
 int configFontSize(char *input);
 int configFontAlpha(char *input);
 int configTimeOut(char *input);
+int configWindowAlpha(char *input);
 // Globals
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
 xcb_ewmh_connection_t *ewmh_con;
-Display *disp_con; // X11 Connection
+Display *disp_con;                   // X11 Connection
 windowInfo_t *visibleWindowsArray;   // Holds information about visible windows on
 desktopInfo_t *visibleDesktopsArray; // Holds info on the desktops
 uint32_t numVisibleWindows;
 uint32_t numVisibleDesktops;
 uint32_t curentActiveDesktop;  // Used to got back to it when we exit and
 xcb_window_t currentActiveWin; // Used to go back to it when we do nothing
-const char labelString[] = "fjdklaghei;nvop";
-//const char labelString[] = "abcd";
-const uint32_t numCharInLabelString = sizeof(labelString) - 1;
 gboolean posiInitalized = FALSE;
 uint32_t charMatchIndex = 0; // Holds how many charcters we have matched
 // GTK Stuff
@@ -101,20 +109,30 @@ gint timeOutCallback(); // Function to exit when timer expires
 
 // clang-format off
 #define VERSION "1.0"
+
 /* help {{{ */
 /* #define HELP */
-/*   "winswitch " VERSION "\n" */
-/*   "Usage: winswitch [OPTION]...overlay to change windows\n" */
-/*   "Actions:\n" */
-/*   "  -t <TIME>            Set timeout period in seconds, 0 for no timeout\n" */
-/*   "  -fs <SIZE>           Set the font size\n" */
-/*   "  -fn <NAME>           Set the font name\n" */
-/*   "  -fa <ALPHA>          Set the inactive font alpha alpha \n" */
-/*   "  -fc <ALPHA>          Set the font color \n" */
-/*   "  -wa <ALPHA>          Set the window alpha \n" */
-/*   "Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \ */
-/*   "Released under the GNU General Public License.\n" */
-/*   "Copyright (C) 2003\n" */
+const char help[]={
+  "winswitch " VERSION "\n"
+  "Usage: winswitch [OPTION]...overlay to change windows using the keyboard mostly used with tiling window managers. \n"
+  "Get help:   --help \n"
+  "Actions:\n"
+  "  -t <TIME>           Set timeout period in seconds, 0 for no timeout\n"
+  "  -s <SIZE>           Set the font size in pixels \n"
+  "  -f <NAME>           Set the font name\n"
+  "  -a <ALPHA>          Set the inactive font alpha alpha \n"
+  "  -c <ALPHA>          Set the font color format is hex color FFFFFF \n"
+  "  -w <ALPHA>         Set the window alpha must be between 0.0 and 1.0  \n"
+  "  -a                  Ignore sticky windows, some applications (docks) do not  \n"
+  "                      set properly its window property \n"
+  "  -S                  A string of characters used to label the windows must be at least 2 character long, \n"
+  "                      and more than the number of active desktops, characters must be not repeated or behavior\n"
+  "                      behavior of the app is undefined\n"
+
+  "  -h or --help  for this listing \n"
+  "Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \
+  "Released under the GNU General Public License.\n"
+  "Copyright (C) 2020\n"};
 /* /\* }}} *\/ */
 
 /* // clang-format off */
