@@ -80,7 +80,7 @@ typedef struct {
 } configuration_t;
 
 configuration_t config = {
-    .winAlpha = 0.4,
+    .winAlpha = 0.2,
     .timeOut = 10,
     .fontSize = 64.0,
     .quitChar = 'q',
@@ -93,7 +93,7 @@ configuration_t config = {
     .rect.color.r = 0.23137,
     .rect.color.g = 0.23529,
     .rect.color.b = 0.20784,
-    .rect.color.alpha = 0.7,
+    .rect.color.alpha = 0.6,
     .labelString = "fjdklaghei;nvop\0",
     .fontPath = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
 };
@@ -151,16 +151,16 @@ gint timeOutCallback(); // Function to exit when timer expires
 const char help[]={
 "winswitch " VERSION "\n"
 "Usage: winswitch [OPTION]\n"
-"A command line tool to switch the active window using the keyboard, display  an overlay\n"
-"on dekstops to select window, mostly used for tiling window managers\n"
+"A command line tool to switch the active window using the keyboard, displays  an overlay\n"
+"on dekstops to select window, mostly used for tiling window managers.\n"
 "Get help:   --help \n"
 "Actions:\n"
-"  -t <TIME>   Set timeout period in seconds, 0 for no timeout\n"
-"  -s <SIZE>   Set the font size in pixels \n"
-"  -f <FILE>   Set the ttf font path name\n"
-"  -c <COLOR>  Set the font color format is hex color FFFFFFFF \n"
-"  -           the alpha value will be used to indicate selctcted characters \n"
-"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0  \n"
+"  -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10.\n"
+"  -s <SIZE>   Set the font size in pixels, default 64 \n"
+"  -f <FILE>   Set the ttf or otf font path name\n"
+"  -c <COLOR>  Set the font color format is hex color RRGGBBAA \n"
+"              the alpha value will be used to indicate selctcted characters \n"
+"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.2  \n"
 "  -a          Ignore sticky windows, some applications (docks) do not  \n"
 "              set properly its window property \n"
 "  -S          A string of characters used to label the windows must be at least 2 character long, \n"
