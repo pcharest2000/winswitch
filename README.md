@@ -19,10 +19,10 @@ A Windows manager compositor (compiz and picom tested), I am working on fake tra
 
 Build requirements:
 
-lib X11-dev/
-lib XCB-dev/
-lib freetype2.0-dev/
-lib gtk3.0-dev/
+* lib X11-dev/
+* lib XCB-dev/
+* lib freetype2.0-dev/
+* lib gtk3.0-dev/
 
 Clone the repo:/
 git clone https://github.com/pcharest2000/winswitch.git/
