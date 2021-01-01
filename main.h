@@ -167,7 +167,7 @@ const char help[]={
 "  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.1  \n"
 "  -a          Ignore sticky windows, some applications (docks) do not  \n"
 "              set properly its window property \n"
-"  -S          A string of characters used to label the windows must be at least 2 character long, \n"
+"  -S <STRING> A string of characters used to label the windows must be at least 2 character long, \n"
 "              and more than the number of active desktops, characters must be not repeated or behavior\n"
 "              behavior of the app is undefined\n"
 "example:\n"

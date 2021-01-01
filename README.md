@@ -43,28 +43,27 @@ For support & all other kinds of questions open an issue ticket.
 
 Excecute winswitch --help or -h:
 
-"Usage: winswitch [OPTION]\n"
-"A command line tool to switch the active window using the keyboard, displays  an overlay\n"
-"on the visible dekstop(s) to select window, mostly used for tiling window managers \n"
-"and multi screen setup."
-"Get help:   --help \n"
-"Actions:\n"
-"  -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10s.\n"
-"  -s <SIZE>   Set the font size in pixels, default 64 pixels \n"
-"  -f <FILE>   Set the ttf or otf font path name\n"
-"  -c <COLOR>  Set the font color format is hex color RRGGBBAA \n"
-"              the alpha value will be used to indicate selctcted characters \n"
-"  -C <COLOR>  Set the box color format is hex color RRGGBBAA \n"
-"              the alpha value will be used to indicate selctcted characters \n"
-"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.1  \n"
-"  -a          Ignore sticky windows, some applications (docks) do not  \n"
-"              set properly its window property \n"
-"  -S          A string of characters used to label the windows must be at least 2 character long, \n"
-"              and more than the number of active desktops, characters must be not repeated or behavior\n"
-"              behavior of the app is undefined\n"
-"example:\n"
-"winswitch -t 10 -C 3B3C35FF -c FDFFFFFF   -S fhdjsksla \n"
-"  -h or --help  for this listing \n"
-"Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \
-"Released under the GNU General Public License.\n"
-"Copyright (C) 2020\n"};
+Usage: winswitch [OPTION]
+A command line tool to switch the active window using the keyboard, displays  an overlay
+on the visible dekstop(s) to select window, mostly used for tiling window managers 
+and multi screen setup.Get help:   --help 
+Actions:
+  -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10s.\
+  -s <SIZE>   Set the font size in pixels, default 64 pixels\
+  -f <FILE>   Set the ttf or otf font path name\
+  -c <COLOR>  Set the font color format is hex color RRGGBBAA \
+              the alpha value will be used to indicate selctcted characters \
+  -C <COLOR>  Set the box color format is hex color RRGGBBAA \
+              the alpha value will be used to indicate selctcted characters \
+  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.1  \
+  -a          Ignore sticky windows, some applications (docks) do not  \
+              set properly its window property \
+  -S          A string of characters used to label the windows must be at least 2 character long, \
+              and more than the number of active desktops, characters must be not repeated or behavior\
+              behavior of the app is undefined\
+example:\
+winswitch -t 10 -C 3B3C35FF -c FDFFFFFF   -S fhdjsksla \
+  -h or --help  for this listing \
+Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\
+Released under the GNU General Public License.\
+Copyright (C) 2020\
