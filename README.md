@@ -8,6 +8,7 @@ A work n progress!
 A command line tool to switch the active window using the keyboard, displays  an overlay on dekstops to select a window, mostly used for tiling window managers.
 
 
+![](https://github.com/pcharest2000/winswitch/raw/main/screenshots/screen.png)
 ![](https://github.com/pcharest2000/winswitch/raw/main/screenshots/sample.gif)
 
 ## How do I install winsswitch?
