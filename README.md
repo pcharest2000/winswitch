@@ -5,7 +5,7 @@
 
 A work n progress!
 
-A command line tool to switch the active window using the keyboard, displays  an overlay on dekstops to select window, mostly used for tiling window managers.
+A command line tool to switch the active window using the keyboard, displays  an overlay on dekstops to select a window, mostly used for tiling window managers.
 
 
 ## How do I install winsswitch?
@@ -22,8 +22,8 @@ git clone https://github.com/pcharest2000/winswitch.git
 cd winswitch
 make
 
--copy winswitch somewhere in your path
--bind a keyboard shortcut to winswitch (see your tiling window manger documentation) example for i3:  
+Copy winswitch somewhere in your path
+Bind a keyboard shortcut to winswitch (see your tiling window manger documentation) example for i3:  
 bindsym $mod+s  exec "${HOME}/.local/bin/switcher"
 
 ## Where can I get help?
