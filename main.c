@@ -26,7 +26,7 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "main.h"
 
 void strToUpper(char *input) {
-  char *ori = input;
+ // char *ori = input;
   for (int i = 0; i < strlen(input); i++) {
     //We transform lower to caps
     if (*input >= 97 && *input <= 122) {
@@ -120,13 +120,12 @@ int configTimeOut(char *input) {
 int configWindowAlpha(char *input) {
   float alpha;
   if (sscanf(input, "%f", &alpha) == EOF || alpha > 1.0 || alpha < 0.0) {
-    fprintf(stderr, "\n Invalid input for font alpha value must be float between 0 .0and 1.0");
+    fprintf(stderr, "\n Invalid input for font alpha value must be float between 0.0 and 1.0");
     return EXIT_FAILURE;
   }
   config.winAlpha = alpha;
   return 0;
 }
-
 
 int configFontSize(char *input) {
   float size;
@@ -144,13 +143,27 @@ int configFontPath(char *input) {
   FT_Library value;
   FT_Error status;
   FT_Face face;
-
   status = FT_Init_FreeType(&value);
   status = FT_New_Face(value, input, 0, &face);
   if (status != 0) {
     fprintf(stderr, "Error %d opening %s.\n", status, input);
   }
   config.cff = cairo_ft_font_face_create_for_ft_face(face, 0);
+  return 0;
+}
+int configBoxColor(char *input) {
+  //VddFunction takes hexadeciin
+  //male
+  if (strlen(input) != 8) {
+    printf("\n Invalid string size for color, must be RGBA hexadecimal!");
+    exit(EXIT_FAILURE);
+  }
+  int r, g, b,a;
+  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b,&a);
+  config.rect.color.r = r / 255.0;
+  config.rect.color.g = g / 255.0;
+  config.rect.color.b = b / 255.0;
+  config.rect.color.alpha = a / 255.0;
   return 0;
 }
 int configFontColor(char *input) {
@@ -202,10 +215,10 @@ static void do_drawing(cairo_t *cr) {
       cairo_text_extents(cr, visibleWindowsArray[i].as, &te);
       visibleWindowsArray[i].fontPosX = visibleWindowsArray[i].x + visibleWindowsArray[i].width / 2 - (te.width / 2 + te.x_bearing);
       visibleWindowsArray[i].fontPosY = visibleWindowsArray[i].y + visibleWindowsArray[i].height / 2 - (te.height / 2 + te.y_bearing);
-      visibleWindowsArray[i].rbackRect.x = visibleWindowsArray[i].fontPosX + te.x_bearing - 0.3 * te.width / 2;
-      visibleWindowsArray[i].rbackRect.y = visibleWindowsArray[i].fontPosY + te.y_bearing - 0.3 * te.height / 2;
-      visibleWindowsArray[i].rbackRect.width = te.width * 1.3;
-      visibleWindowsArray[i].rbackRect.heigth = te.height * 1.3;
+      visibleWindowsArray[i].rbackRect.x = visibleWindowsArray[i].fontPosX + te.x_bearing - 0.4 * te.width / 2;
+      visibleWindowsArray[i].rbackRect.y = visibleWindowsArray[i].fontPosY + te.y_bearing - 0.4 * te.height / 2;
+      visibleWindowsArray[i].rbackRect.width = te.width * 1.4;
+      visibleWindowsArray[i].rbackRect.heigth = te.height * 1.4;
     }
   }
   //Do the real drawing
@@ -406,10 +419,13 @@ int parseArguments(int argc, char *argv[]) {
   // put ':' in the starting of the
   // string so that program can
   //distinguish between '?' and ':'
-  while ((opt = getopt(argc, argv, "ic:s:a:t:w:S:f:")) != -1) {
+  while ((opt = getopt(argc, argv, "ic:C:s:a:t:w:S:f:")) != -1) {
     switch (opt) {
     case 'f':
       configFontPath(optarg);
+      break;
+    case 'C':
+      configBoxColor(optarg);
       break;
     case 'c':
       configFontColor(optarg);

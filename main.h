@@ -80,7 +80,7 @@ typedef struct {
 } configuration_t;
 
 configuration_t config = {
-    .winAlpha = 0.2,
+    .winAlpha = 0.1,
     .timeOut = 10,
     .fontSize = 64.0,
     .quitChar = 'q',
@@ -120,6 +120,7 @@ int configFontColor(char *input);
 int configFontSize(char *input);
 int configTimeOut(char *input);
 int configWindowAlpha(char *input);
+int configBoxColor(char *input);
 // Globals
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
@@ -152,21 +153,25 @@ const char help[]={
 "winswitch " VERSION "\n"
 "Usage: winswitch [OPTION]\n"
 "A command line tool to switch the active window using the keyboard, displays  an overlay\n"
-"on dekstops to select window, mostly used for tiling window managers.\n"
+"on the visible dekstop(s) to select window, mostly used for tiling window managers \n"
+"and multi screen setup."
 "Get help:   --help \n"
 "Actions:\n"
-"  -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10.\n"
-"  -s <SIZE>   Set the font size in pixels, default 64 \n"
+"  -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10s.\n"
+"  -s <SIZE>   Set the font size in pixels, default 64 pixels \n"
 "  -f <FILE>   Set the ttf or otf font path name\n"
 "  -c <COLOR>  Set the font color format is hex color RRGGBBAA \n"
 "              the alpha value will be used to indicate selctcted characters \n"
-"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.2  \n"
+"  -C <COLOR>  Set the box color format is hex color RRGGBBAA \n"
+"              the alpha value will be used to indicate selctcted characters \n"
+"  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0, default 0.1  \n"
 "  -a          Ignore sticky windows, some applications (docks) do not  \n"
 "              set properly its window property \n"
 "  -S          A string of characters used to label the windows must be at least 2 character long, \n"
 "              and more than the number of active desktops, characters must be not repeated or behavior\n"
 "              behavior of the app is undefined\n"
-
+"example:\n"
+"winswitch -t 10 -C 3B3C35FF -c FDFFFFFF   -S fhdjsksla \n"
 "  -h or --help  for this listing \n"
 "Author, current maintainer: Philippe Charest <philippe.charest@gmail.com\n"                \
 "Released under the GNU General Public License.\n"

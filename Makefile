@@ -20,19 +20,19 @@ OBJS = $(SRCS:.c=.o)
 OBJS_DBG = $(SRCS_DBG:.c=.g)
 HDRS = main.h
 
-all: switcher
+all: winswitcher
 
-debug: switcher.dbg
+debug: winswitcher.dbg
 
 .SUFFIXES : .g
 
 .c.g:
 	$(CC) $(CFLAGS_DBG) -c $< -o $*.g
 
-switcher.dbg: $(OBJS_DBG)
+winswitcher.dbg: $(OBJS_DBG)
 	$(CC) $(CFLAGS_DBG) -o $@ $(OBJS_DBG) $(LDFLAGS)
 
-switcher: $(OBJS)
+winswitcher: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 $(OBJS): $(HDRS)
@@ -52,6 +52,6 @@ $(OBJS_DBG): $(HDRS)
 # 	xditview trout
 
 clean:
-	rm -f switcher switcher.dbg *.o *.g core
+	rm -f winswitch winswitcher.dbg *.o *.g core
 
 # end
