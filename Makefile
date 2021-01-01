@@ -20,19 +20,19 @@ OBJS = $(SRCS:.c=.o)
 OBJS_DBG = $(SRCS_DBG:.c=.g)
 HDRS = main.h
 
-all: winswitcher
+all: winswitch
 
-debug: winswitcher.dbg
+debug: winswitch.dbg
 
 .SUFFIXES : .g
 
 .c.g:
 	$(CC) $(CFLAGS_DBG) -c $< -o $*.g
 
-winswitcher.dbg: $(OBJS_DBG)
+winswitch.dbg: $(OBJS_DBG)
 	$(CC) $(CFLAGS_DBG) -o $@ $(OBJS_DBG) $(LDFLAGS)
 
-winswitcher: $(OBJS)
+winswitch: $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $(OBJS) $(LDFLAGS)
 
 $(OBJS): $(HDRS)

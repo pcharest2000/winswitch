@@ -26,16 +26,15 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "main.h"
 
 void strToUpper(char *input) {
-  char *ori = input;
-  uint32_t str_length= strlen(input);
-  for (uint32_t i = 0; i < str_length ; i++) {
+  // char *ori = input;
+  for (int i = 0; i < strlen(input); i++) {
     //We transform lower to caps
     if (*input >= 97 && *input <= 122) {
       *input -= 32;
     }
     input++;
   }
-  input = ori;
+  //input = ori;
 }
 
 gboolean labelMatch(char input) {
@@ -469,7 +468,7 @@ int parseArgumentsLong(int argc, char *argv[]) {
       configTimeOut(optarg);
       break;
     case 'g':
-      fputs(help, stdout);
+      fputs(help,stdout);
       exit(EXIT_SUCCESS);
       break;
     case 'h':
