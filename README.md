@@ -13,6 +13,10 @@ A command line tool to switch the active window using the keyboard, displays  an
 
 ## How do I install winsswitch?
 
+Requirements:
+
+A Windows manger compositor (compix and picom tested), I am working on fake transparency, but all this X stuff is new to me.
+
 Build requirements:
 
 lib X11-dev
