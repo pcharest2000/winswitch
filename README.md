@@ -44,9 +44,9 @@ For support & all other kinds of questions open an issue ticket.
 Excecute winswitch --help or -h:
 
 Usage: winswitch [OPTION]
-A command line tool to switch the active window using the keyboard, displays  an overlay
-on the visible dekstop(s) to select window, mostly used for tiling window managers 
-and multi screen setup.Get help:   --help 
+A command line tool to switch the active window using the keyboard, displays  an overlay\
+on the visible dekstop(s) to select window, mostly used for tiling window managers \
+and multi screen setup.Get help:   --help \
 Actions:
   -t <TIME>   Set timeout period in seconds to quit, 0 for no timeout, default 10s.\
   -s <SIZE>   Set the font size in pixels, default 64 pixels\
