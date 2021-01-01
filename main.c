@@ -26,11 +26,11 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 #include "main.h"
 
 void strToUpper(char *input) {
- // char *ori = input;
+  // char *ori = input;
   for (int i = 0; i < strlen(input); i++) {
     //We transform lower to caps
     if (*input >= 97 && *input <= 122) {
-      *input  -=32;
+      *input -= 32;
     }
     input++;
   }
@@ -39,10 +39,10 @@ void strToUpper(char *input) {
 
 gboolean labelMatch(char input) {
   uint32_t match = 0;
-//Convert lower to upper
-    if (input >= 97 && input <= 122) {
-      input -= 32;
-    }
+  //Convert lower to upper
+  if (input >= 97 && input <= 122) {
+    input -= 32;
+  }
   // Is the character is not part of the string if not exit
   if (!strchr(config.labelString, input)) {
     return FALSE;
@@ -158,8 +158,8 @@ int configBoxColor(char *input) {
     printf("\n Invalid string size for color, must be RGBA hexadecimal!");
     exit(EXIT_FAILURE);
   }
-  int r, g, b,a;
-  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b,&a);
+  int r, g, b, a;
+  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b, &a);
   config.rect.color.r = r / 255.0;
   config.rect.color.g = g / 255.0;
   config.rect.color.b = b / 255.0;
@@ -173,9 +173,9 @@ int configFontColor(char *input) {
     printf("\n Invalid size for color, must be RGB hexadecimal!");
     return EXIT_FAILURE;
   }
-  int r, g, b,a;
+  int r, g, b, a;
   //printf("%s",input);
-  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b,&a);
+  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b, &a);
   config.fontColor.r = r / 255.0;
   config.fontColor.g = g / 255.0;
   config.fontColor.b = b / 255.0;
@@ -253,7 +253,20 @@ static gboolean drawCallback(GtkWidget *widget, cairo_t *cr, gpointer user_data)
   do_drawing(cr);
   return FALSE;
 }
-
+void getWindowGeometrie(xcb_window_t drawable) {
+  xcb_translate_coordinates_cookie_t tc = xcb_translate_coordinates(xcb_con, screen->root, drawable, 0, 0);
+  xcb_translate_coordinates_reply_t *tr = xcb_translate_coordinates_reply(xcb_con, tc, NULL);
+  printf("\n Trans coo x %d y %d", tr->dst_x, tr->dst_y);
+}
+void printDesktop_geometrie() {
+  xcb_get_property_cookie_t co;
+  co = xcb_ewmh_get_desktop_viewport(ewmh_con, 0);
+  xcb_ewmh_get_desktop_viewport_reply_t reply;
+  xcb_ewmh_get_desktop_viewport_reply(ewmh_con, co, &reply, NULL);
+  for (uint32_t i = 0; i < reply.desktop_viewport_len; i++) {
+    printf("\nDesktop x  %d, y %d ", reply.desktop_viewport[i].x, reply.desktop_viewport[i].y);
+  }
+}
 void returnHome() {
   // we need to reset the mouse pointer to the origanle window and Desktop
   xcb_warp_pointer(xcb_con, XCB_NONE, currentActiveWin, 10, 10, 20, 20, 20, 20);
@@ -304,6 +317,7 @@ void getVisibleWindows() {
     uint8_t state = winAttriReply->map_state;
     free(winAttriReply);
     if (state == XCB_MAP_STATE_VIEWABLE) {
+
       /*Get windows Destopps*/
       int32_t desk;
       xcb_ewmh_get_wm_desktop_reply(ewmh_con, xcb_ewmh_get_wm_desktop(ewmh_con, windowsReply.windows[i]), &desk, NULL);
@@ -313,29 +327,25 @@ void getVisibleWindows() {
       }
       visibleWindowsArray[numVisibleWindows].winId = windowsReply.windows[i];
       /*Get window Geometry*/
-      int x, y, junkx, junky;
-      unsigned int wwidth, wheight, bw, depth;
-      Window junkroot;
-      XGetGeometry(disp_con, windowsReply.windows[i], &junkroot, &junkx, &junky, &wwidth, &wheight, &bw, &depth);
-      XTranslateCoordinates(disp_con, windowsReply.windows[i], junkroot, junkx, junky, &x, &y, &junkroot);
-      visibleWindowsArray[numVisibleWindows].width = wwidth;
-      visibleWindowsArray[numVisibleWindows].height = wheight;
-      visibleWindowsArray[numVisibleWindows].x = x;
-      visibleWindowsArray[numVisibleWindows].y = y;
+      xcb_get_geometry_cookie_t gc = xcb_get_geometry(xcb_con, windowsReply.windows[i]);
+      xcb_get_geometry_reply_t *gr = xcb_get_geometry_reply(xcb_con, gc, NULL);
+
+      xcb_translate_coordinates_cookie_t tc = xcb_translate_coordinates(xcb_con, screen->root, windowsReply.windows[i],0, 0);
+      xcb_translate_coordinates_reply_t *tr = xcb_translate_coordinates_reply(xcb_con, tc, NULL);
+      visibleWindowsArray[numVisibleWindows].width = gr->width;
+      visibleWindowsArray[numVisibleWindows].height = gr->height;
+      visibleWindowsArray[numVisibleWindows].x = 0-tr->dst_x; //I don't care abut window borders for now
+      visibleWindowsArray[numVisibleWindows].y = 0-tr->dst_y;
       visibleWindowsArray[numVisibleWindows].noMatch = FALSE;
       numVisibleWindows++;
+      free(tr);
+      free(gr);
     }
   }
   xcb_ewmh_get_windows_reply_wipe(&windowsReply);
 }
 
 int connectToServers() {
-  /* Open the connection to the X11 server */
-  if (!(disp_con = XOpenDisplay(NULL))) {
-    fputs("\nCannot open display.", stderr);
-    return EXIT_FAILURE;
-  }
-  /* Open the connection to the XCB server */
   xcb_con = xcb_connect(NULL, NULL);
   if (xcb_connection_has_error(xcb_con)) {
     printf("\nXCB has erros!!");
@@ -361,7 +371,6 @@ int connectToServers() {
 void destroyWindow() {
   xcb_flush(xcb_con);
   xcb_disconnect(xcb_con);
-  XCloseDisplay(disp_con);
   usleep(500);
   gtk_widget_destroy(gtkWin);
   gtk_main_quit();
@@ -469,7 +478,6 @@ int parseArguments(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
-
   strToUpper(config.labelString);
   loadFont();
   parseArguments(argc, argv);
@@ -478,7 +486,7 @@ int main(int argc, char *argv[]) {
   /* } */
   if (connectToServers()) {
     printf("Cannot connect to X");
-    return 0;
+    exit(EXIT_FAILURE);
   }
   getVisibleWindows();
   selectionSort(visibleWindowsArray, numVisibleWindows);

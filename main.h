@@ -1,8 +1,6 @@
 #ifndef __MAIN_H_
 #define __MAIN_H_
 #include "atoms.h"
-#include <X11/Xlib.h>
-#include <X11/Xmu/WinUtil.h>
 #include <cairo-ft.h>
 #include <cairo/cairo.h>
 #include <ft2build.h>
@@ -125,7 +123,6 @@ int configBoxColor(char *input);
 xcb_connection_t *xcb_con;
 xcb_screen_t *screen;
 xcb_ewmh_connection_t *ewmh_con;
-Display *disp_con;                   // X11 Connection
 windowInfo_t *visibleWindowsArray;   // Holds information about visible windows on
 desktopInfo_t *visibleDesktopsArray; // Holds info on the desktops
 uint32_t numVisibleWindows;
