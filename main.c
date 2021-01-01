@@ -25,16 +25,33 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 /* }}} */
 #include "main.h"
 
+void strToUpper(char *input) {
+  char *ori = input;
+  for (int i = 0; i < strlen(input); i++) {
+    //We transform lower to caps
+    if (*input >= 97 && *input <= 122) {
+      *input  -=32;
+    }
+    input++;
+  }
+  //input = ori;
+}
+
 gboolean labelMatch(char input) {
   uint32_t match = 0;
+//Convert lower to upper
+    if (input >= 97 && input <= 122) {
+      input -= 32;
+    }
   // Is the character is not part of the string if not exit
   if (!strchr(config.labelString, input)) {
-    printf("\nNoMatch");
     return FALSE;
   }
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].noMatch)
       continue;
+    //We transform lower to upper
+
     if (visibleWindowsArray[i].as[charMatchIndex] == input) {
       visibleWindowsArray[i].numCharMatch++;
       match = 1;
@@ -84,6 +101,7 @@ int configLabel(char *input) {
   }
   config.labelString[0] = '\0';
   strcat(config.labelString, input);
+  strToUpper(config.labelString);
   numCharInLabelString = strlen(config.labelString);
   return 0;
 }
@@ -109,15 +127,7 @@ int configWindowAlpha(char *input) {
   return 0;
 }
 
-int configFontAlpha(char *input) {
-  float alpha;
-  if (sscanf(input, "%f", &alpha) == EOF || alpha > 1.0 || alpha < 0.0) {
-    fprintf(stderr, "\n Invalid input for font alpha value must be float between 0 .0and 1.0");
-    return EXIT_FAILURE;
-  }
-  config.selectedAlpha = alpha;
-  return 0;
-}
+
 int configFontSize(char *input) {
   float size;
   if (sscanf(input, "%f", &size) == EOF || size < 1.0) {
@@ -146,16 +156,17 @@ int configFontPath(char *input) {
 int configFontColor(char *input) {
   //VddFunction takes hexadeciin
   //male
-  if (strlen(input) != 6) {
+  if (strlen(input) != 8) {
     printf("\n Invalid size for color, must be RGB hexadecimal!");
     return EXIT_FAILURE;
   }
-  int r, g, b;
+  int r, g, b,a;
   //printf("%s",input);
-  sscanf(input, "%02x%02x%02x", &r, &g, &b);
+  sscanf(input, "%02x%02x%02x%02x", &r, &g, &b,&a);
   config.fontColor.r = r / 255.0;
   config.fontColor.g = g / 255.0;
   config.fontColor.b = b / 255.0;
+  config.fontColor.alpha = a / 255.0;
   return 0;
   /* printf("\n R: %f G: %f B: %f", config.fontR, config.fontG, config.fontB); */
 }
@@ -216,7 +227,7 @@ static void do_drawing(cairo_t *cr) {
     for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
       temp[0] = visibleWindowsArray[i].as[j];
       if (j + 1 <= visibleWindowsArray[i].numCharMatch)
-        cairo_set_source_rgba(cr, config.fontColor.r, config.fontColor.g, config.fontColor.g, config.selectedAlpha);
+        cairo_set_source_rgba(cr, config.fontColor.r, config.fontColor.g, config.fontColor.g, config.fontColor.alpha);
       else
         cairo_set_source_rgb(cr, config.fontColor.r, config.fontColor.g, config.fontColor.b);
       cairo_show_text(cr, temp);
@@ -226,7 +237,6 @@ static void do_drawing(cairo_t *cr) {
 }
 
 static gboolean drawCallback(GtkWidget *widget, cairo_t *cr, gpointer user_data) {
-  printf("\nIn draw callback");
   do_drawing(cr);
   return FALSE;
 }
@@ -358,11 +368,10 @@ gboolean keypressCallback(GtkWidget *widget, GdkEventKey *event,
     gtk_main_quit();
     return FALSE;
   }
-  printf("\nChar key: %c", event->keyval);
+
   // If we have a keyboard match redraw
-  gtk_widget_queue_draw(gtkWin);
   if (labelMatch(event->keyval)) {
-    // gtk_widget_queue_draw(gtkWin);
+    gtk_widget_queue_draw(gtkWin);
   }
   return FALSE;
 }
@@ -408,9 +417,6 @@ int parseArguments(int argc, char *argv[]) {
     case 's':
       configFontSize(optarg);
       break;
-    case 'a':
-      configFontAlpha(optarg);
-      break;
     case 'w':
       configWindowAlpha(optarg);
       break;
@@ -447,6 +453,8 @@ int parseArguments(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+
+  strToUpper(config.labelString);
   loadFont();
   parseArguments(argc, argv);
   /* if (parseArguments(argc, argv) == EXIT_SUCCESS) { */

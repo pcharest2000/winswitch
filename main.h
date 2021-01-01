@@ -15,6 +15,8 @@
 #include <unistd.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
+#include <string.h>
+#include <ctype.h>
 #include FT_FREETYPE_H
 
 #define MAXLABELLENGTH 50
@@ -85,16 +87,14 @@ configuration_t config = {
     .fontColor.r = 0.99216,
     .fontColor.g = 1.0,
     .fontColor.b = 0.945098,
-    .selectedAlpha = 0.3,
+    .fontColor.alpha = 0.3,
     .ignoreSticky = FALSE,
     .rect.radius = 9.6,
-    .rect.color.r = 0.99216,
-    .rect.color.g = 1.0,
-    .rect.color.b = 0.945098,
-    .rect.color.alpha = 0.1,
-    //.labelString = "FIJGHDKSLALE\0",
+    .rect.color.r = 0.23137,
+    .rect.color.g = 0.23529,
+    .rect.color.b = 0.20784,
+    .rect.color.alpha = 0.7,
     .labelString = "fjdklaghei;nvop\0",
-    //.font = "Ubuntu Mono",
     .fontPath = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
 };
 uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
@@ -112,12 +112,12 @@ void swap(windowInfo_t *xp, windowInfo_t *yp);
 void getDesktopsInfo();
 void labelWindows();
 void loadFont();
+void strToUpper(char *input);
 //Config functions for parameters
 
 void initConfig();
 int configFontColor(char *input);
 int configFontSize(char *input);
-int configFontAlpha(char *input);
 int configTimeOut(char *input);
 int configWindowAlpha(char *input);
 // Globals
@@ -158,8 +158,8 @@ const char help[]={
 "  -t <TIME>   Set timeout period in seconds, 0 for no timeout\n"
 "  -s <SIZE>   Set the font size in pixels \n"
 "  -f <FILE>   Set the ttf font path name\n"
-"  -a <ALPHA>  Set the inactive font alpha alpha \n"
-"  -c <ALPHA>  Set the font color format is hex color FFFFFF \n"
+"  -c <COLOR>  Set the font color format is hex color FFFFFFFF \n"
+"  -           the alpha value will be used to indicate selctcted characters \n"
 "  -w <ALPHA>  Set the window alpha must be between 0.0 and 1.0  \n"
 "  -a          Ignore sticky windows, some applications (docks) do not  \n"
 "              set properly its window property \n"
