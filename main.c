@@ -431,7 +431,7 @@ int parseArgumentsLong(int argc, char *argv[]) {
     /* getopt_long stores the option index here. */
     int option_index = 0;
 
-    c = getopt_long(argc, argv, "ab:c:d:e:f:h",
+    c = getopt_long(argc, argv, "gab:c:d:e:f:h:i:",
                     long_options, &option_index);
 
     /* Detect the end of the options. */
@@ -487,11 +487,6 @@ int parseArgumentsLong(int argc, char *argv[]) {
     }
   }
 
-  /* Instead of reporting ‘--verbose’
-     and ‘--brief’ as they are encountered,
-     we report the final status resulting from them. */
-  if (verbose_flag)
-    puts("verbose flag is set");
 
   /* Print any remaining command line arguments (not options). */
   if (optind < argc) {
