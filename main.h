@@ -94,7 +94,7 @@ configuration_t config = {
     .rect.color.b = 0.20784,
     .rect.color.alpha = 0.6,
     .labelString = "fjdklaghei;nvop\0",
-    .fontPath = "/usr/share/fonts/truetype/ubuntu/Ubuntu-B.ttf"
+    .fontPath = "/usr/share/fonts/truetype/ubuntu/Ubuntu-Ba.ttf"
 };
 uint32_t numCharInLabelString = sizeof(config.labelString) - 1;
 

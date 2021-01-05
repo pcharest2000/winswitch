@@ -27,8 +27,8 @@ Free Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
 
 void strToUpper(char *input) {
   char *ori = input;
-  uint32_t str_length= strlen(input);
-  for (uint32_t i = 0; i < str_length ; i++) {
+  uint32_t str_length = strlen(input);
+  for (uint32_t i = 0; i < str_length; i++) {
     //We transform lower to caps
     if (*input >= 97 && *input <= 122) {
       *input -= 32;
@@ -229,13 +229,16 @@ static void do_drawing(cairo_t *cr) {
   cairo_paint(cr);
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
 
+  if (config.cff == NULL)
+    cairo_select_font_face(cr, "serif", CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD);
+  else
+    cairo_set_font_face(cr, config.cff);
   for (uint32_t i = 0; i < numVisibleWindows; i++) {
     if (visibleWindowsArray[i].noMatch) {
       continue;
     }
     char temp[] = " ";
     cairo_set_font_size(cr, config.fontSize);
-    cairo_set_font_face(cr, config.cff);
     draw_rounded_path(cr, visibleWindowsArray[i].rbackRect.x, visibleWindowsArray[i].rbackRect.y, visibleWindowsArray[i].rbackRect.width, visibleWindowsArray[i].rbackRect.heigth, config.rect.radius);
     cairo_move_to(cr, visibleWindowsArray[i].fontPosX, visibleWindowsArray[i].fontPosY);
     for (int32_t j = 0; j < visibleWindowsArray[i].charWidth; j++) {
@@ -487,7 +490,6 @@ int parseArgumentsLong(int argc, char *argv[]) {
     }
   }
 
-
   /* Print any remaining command line arguments (not options). */
   if (optind < argc) {
     printf("non-option ARGV-elements: ");
@@ -727,6 +729,7 @@ void loadFont() {
   status = FT_New_Face(value, config.fontPath, 0, &face);
   if (status != 0) {
     fprintf(stderr, "Error %d opening %s.\n", status, config.fontPath);
+    return;
   }
   config.cff = cairo_ft_font_face_create_for_ft_face(face, 0);
 }
